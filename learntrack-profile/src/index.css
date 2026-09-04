@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #EDE9FE transparent;
+}
+.dark * {
+  scrollbar-color: #1E293B transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #EDE9FE;
+  border-radius: 999px;
+}
+.dark *::-webkit-scrollbar-thumb {
+  background: #1E293B;
+}
+
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background: #F7F7FB;
+  color: #0F172A;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.35s ease, color 0.35s ease;
+}
+.dark body {
+  background: #15151F;
+  color: #F1F5F9;
+}
+
+/* Smooth, instant-feeling theme switch across every themed surface,
+   without adding a transition to layout/animation properties so
+   Framer Motion transforms stay untouched. */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-duration: 0.25s;
+  transition-timing-function: ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+h1, h2, h3, h4, .font-heading {
+  font-family: 'Poppins', sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid #7C3AED;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.dark :focus-visible {
+  outline-color: #A78BFA;
+}
