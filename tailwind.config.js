@@ -5,6 +5,17 @@ export default {
   theme: {
     extend: {
       colors: {
+        primary: "#7C3AED",
+        secondary: "#A78BFA",
+        lightPurple: "#F5F3FF",
+        bg: "#F7F7FB",
+        card: "#FFFFFF",
+        borderPurple: "#EDE9FE",
+        textPrimary: "#0F172A",
+        textSecondary: "#64748B",
+        success: "#10B981",
+        warning: "#F59E0B",
+        danger: "#F43F5E",
         brand: {
           DEFAULT: "#7C3AED",
           50: "#F5F3FF",
@@ -24,6 +35,22 @@ export default {
           dark: "#15151F",
           "dark-card": "#1B1B29",
         },
+        dark: {
+          bg: "#15151F",
+          bgSecondary: "#1B1B29",
+          surface: "#1B1B29",
+          card: "#1B1B29",
+          primary: "#8B5CF6",
+          primaryHover: "#A78BFA",
+          accent: "#C4B5FD",
+          text: "#F1F5F9",
+          textSecondary: "#CBD5E1",
+          textMuted: "#94A3B8",
+          border: "#1E293B",
+          success: "#10B981",
+          warning: "#F59E0B",
+          danger: "#F43F5E",
+        },
         subject: {
           ml: "#7C3AED",
           python: "#10B981",
@@ -37,13 +64,27 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        heading: ["Poppins", "sans-serif"],
+        body: ["Inter", "sans-serif"],
       },
       boxShadow: {
         card: "0 1px 2px 0 rgba(16, 24, 40, 0.06), 0 1px 3px 0 rgba(16, 24, 40, 0.08)",
         "card-dark": "0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 1px 3px 0 rgba(0, 0, 0, 0.4)",
+        soft: "0 4px 24px rgba(124, 58, 237, 0.06)",
+        softHover: "0 12px 32px rgba(124, 58, 237, 0.14)",
+        glow: "0 8px 24px rgba(124, 58, 237, 0.28)",
+        softDark: "0 4px 24px rgba(0, 0, 0, 0.25)",
+        softHoverDark: "0 12px 32px rgba(0, 0, 0, 0.4)",
+        glowDark: "0 8px 24px rgba(139, 92, 246, 0.35)",
       },
       borderRadius: {
         xl2: "1rem",
+        card: "22px",
+        pill: "999px",
+      },
+      backgroundImage: {
+        "primary-gradient": "linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)",
+        "primary-gradient-dark": "linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)",
       },
     },
   },
