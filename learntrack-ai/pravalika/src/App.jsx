@@ -22,6 +22,7 @@ import {
   Clock3,
   MailCheck,
 } from "lucide-react";
+import brandArt from "./assets/brand-art.png";
 
 /* -------------------------------------------------------------------- */
 /*  Design tokens — same palette used across the LearnTrack AI frontend */
@@ -145,22 +146,12 @@ function PrimaryButton({ children, ...props }) {
 /* -------------------------------------------------------------------- */
 function BrandPanel() {
   return (
-    <div
-      className="relative hidden h-full flex-col justify-center overflow-hidden rounded-3xl p-10 text-white md:flex"
-      style={{ background: `linear-gradient(160deg, ${COLORS.purple}, ${COLORS.purpleDark})` }}
-    >
-      <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10" />
-      <div className="absolute -bottom-24 -left-10 h-64 w-64 rounded-full bg-white/10" />
-
-      <div className="relative flex flex-col items-center text-center">
-        <div className="mb-5 flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-          <GraduationCap size={18} />
-        </div>
-
-        <h2 className="max-w-sm text-3xl font-bold leading-tight">
-          Measure what you understand — not just what you do.
-        </h2>
-      </div>
+    <div className="relative hidden overflow-hidden rounded-3xl md:flex">
+      <img
+        src={brandArt}
+        alt="LearnTrack AI — Learn Smarter. Understand Better. Achieve More."
+        className="h-full w-full object-cover"
+      />
     </div>
   );
 }
