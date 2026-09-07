@@ -3,6 +3,32 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --quiz-bg: #f3f1fc;
+    --quiz-card: #ffffff;
+    --quiz-ink: #20213b;
+    --quiz-sub: #8d8fa6;
+    --quiz-line: #eceafa;
+    --quiz-purple-soft: #ede9fe;
+    --quiz-purple-faint: #f6f4fe;
+    --quiz-orange-soft: #fdeee0;
+    --quiz-green-soft: #e9fbf1;
+    --quiz-red-soft: #fdeeee;
+  }
+
+  .dark {
+    --quiz-bg: #15151f;
+    --quiz-card: #1b1b29;
+    --quiz-ink: #f8fafc;
+    --quiz-sub: #a1a1b5;
+    --quiz-line: #353548;
+    --quiz-purple-soft: rgba(123, 110, 246, 0.18);
+    --quiz-purple-faint: #242338;
+    --quiz-orange-soft: rgba(242, 153, 74, 0.16);
+    --quiz-green-soft: rgba(51, 199, 126, 0.16);
+    --quiz-red-soft: rgba(242, 104, 94, 0.16);
+  }
+
   html {
     font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
   }

@@ -33,21 +33,21 @@ import {
 /*  Design tokens — same palette used across the LearnTrack AI frontend */
 /* -------------------------------------------------------------------- */
 const COLORS = {
-  bg: "var(--quiz-bg)",
-  card: "var(--quiz-card)",
+  bg: "#F3F1FC",
+  card: "#FFFFFF",
   purple: "#7B6EF6",
   purpleDark: "#5B4CE0",
-  purpleSoft: "var(--quiz-purple-soft)",
-  purpleFaint: "var(--quiz-purple-faint)",
+  purpleSoft: "#EDE9FE",
+  purpleFaint: "#F6F4FE",
   orange: "#F2994A",
-  orangeSoft: "var(--quiz-orange-soft)",
-  ink: "var(--quiz-ink)",
-  sub: "var(--quiz-sub)",
-  line: "var(--quiz-line)",
+  orangeSoft: "#FDEEE0",
+  ink: "#20213B",
+  sub: "#8D8FA6",
+  line: "#ECEAFA",
   green: "#33C77E",
-  greenSoft: "var(--quiz-green-soft)",
+  greenSoft: "#E9FBF1",
   red: "#F2685E",
-  redSoft: "var(--quiz-red-soft)",
+  redSoft: "#FDEEEE",
 };
 
 /* -------------------------------------------------------------------- */
@@ -67,7 +67,7 @@ function SampleBadge({ text = "Sample data" }) {
 function Card({ children, className = "" }) {
   return (
     <div
-      className={`rounded-2xl bg-white p-5 shadow-[0_2px_16px_rgba(91,76,224,0.06)] dark:bg-surface-dark-card dark:shadow-card-dark ${className}`}
+      className={`rounded-2xl bg-white p-5 shadow-[0_2px_16px_rgba(91,76,224,0.06)] ${className}`}
       style={{ background: COLORS.card }}
     >
       {children}
@@ -298,7 +298,7 @@ function GenerateQuiz({ initial, goTo }) {
             Study Material (PDF)
           </label>
           <label
-            className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-8 text-center dark:border-slate-700"
+            className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-8 text-center"
             style={{ borderColor: COLORS.line, background: COLORS.purpleFaint }}
           >
             <FileUp size={22} color={COLORS.purple} />
@@ -526,7 +526,7 @@ function QuizAttempt({ config, goTo, onSubmit }) {
                 }}
               >
                 <span
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-300 text-[10px] font-bold dark:border-slate-600"
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold"
                   style={{
                     borderColor: isSelected ? COLORS.purple : COLORS.line,
                     background: isSelected ? COLORS.purple : "transparent",
