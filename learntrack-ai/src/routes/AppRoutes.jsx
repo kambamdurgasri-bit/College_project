@@ -6,12 +6,23 @@ import EditLearningSpacePage from "../pages/LearningSpaces/EditLearningSpacePage
 import LearningSpaceDetailsPage from "../pages/LearningSpaces/LearningSpaceDetailsPage";
 import TimetablePage from "../pages/Timetable/TimetablePage";
 import ComingSoonPage from "../pages/ComingSoonPage";
+import AnalyticsPage from "../pages/Analytics/AnalyticsPage";
+import SplashPage from "../pages/Auth/SplashPage";
+import LoginPage from "../pages/Auth/LoginPage";
+import RegisterPage from "../pages/Auth/RegisterPage";
+import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
 
 export default function AppRoutes() {
   return (
     <Routes>
+      {/* Module 1: Authentication (public, outside AppLayout/sidebar) */}
+      <Route path="/splash" element={<SplashPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
       <Route element={<AppLayout />}>
-        <Route path="/" element={<Navigate to="/learning-spaces" replace />} />
+        <Route path="/" element={<Navigate to="/splash" replace />} />
 
         {/* Module 3: Learning Spaces */}
         <Route path="/learning-spaces" element={<LearningSpacesPage />} />
@@ -26,7 +37,7 @@ export default function AppRoutes() {
         <Route path="/dashboard" element={<ComingSoonPage title="Dashboard" />} />
         <Route path="/topic-quiz" element={<ComingSoonPage title="Topic Quiz" />} />
         <Route path="/quiz-history" element={<ComingSoonPage title="Quiz History" />} />
-        <Route path="/analytics" element={<ComingSoonPage title="Analytics" />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
         <Route
           path="/ai-recommendations"
           element={<ComingSoonPage title="AI Recommendations" />}
