@@ -7,6 +7,7 @@ import LearningSpaceDetailsPage from "../pages/LearningSpaces/LearningSpaceDetai
 import TimetablePage from "../pages/Timetable/TimetablePage";
 import ComingSoonPage from "../pages/ComingSoonPage";
 import AnalyticsPage from "../pages/Analytics/AnalyticsPage";
+import AIRecommendationsPage from "../pages/AIRecommendations/AIRecommendationsPage";
 
 export default function AppRoutes() {
   return (
@@ -28,10 +29,7 @@ export default function AppRoutes() {
         <Route path="/topic-quiz" element={<ComingSoonPage title="Topic Quiz" />} />
         <Route path="/quiz-history" element={<ComingSoonPage title="Quiz History" />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
-        <Route
-          path="/ai-recommendations"
-          element={<ComingSoonPage title="AI Recommendations" />}
-        />
+        <Route path="/ai-recommendations" element={<AIRecommendationsPage />} />
         <Route path="/profile" element={<ComingSoonPage title="Profile" />} />
         <Route path="/settings" element={<ComingSoonPage title="Settings" />} />
 
