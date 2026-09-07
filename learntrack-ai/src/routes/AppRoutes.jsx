@@ -33,10 +33,10 @@ export default function AppRoutes() {
           <Route path="/timetable" element={<TimetablePage />} />
 
           {/* Module 4: Quiz and Assessment */}
-          <Route path="/topic-quiz" element={<QuizPage />} />
+          <Route path="/topic-quiz" element={<QuizPage key="topic-quiz" />} />
           <Route
             path="/quiz-history"
-            element={<QuizPage initialScreen="history" />}
+            element={<QuizPage key="quiz-history" initialScreen="history" />}
           />
 
           {/* Out-of-scope routes kept as placeholders so sidebar nav never 404s */}
