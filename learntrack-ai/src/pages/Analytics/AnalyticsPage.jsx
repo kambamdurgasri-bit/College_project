@@ -1,14 +1,9 @@
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
-  ArrowRight,
   BarChart3,
   BookMarked,
-  CheckCircle2,
-  Clock3,
-  Flame,
   GraduationCap,
-  Lightbulb,
   Percent,
   Target,
 } from "lucide-react";
@@ -25,13 +20,10 @@ import {
   YAxis,
 } from "recharts";
 
-import ProgressRing from "../../components/common/ProgressRing";
 import {
   trendData,
   subjectPerformance,
   recentActivity,
-  weakTopics,
-  learningTips,
 } from "../../mock-data/analytics";
 
 const TREND_RANGES = ["Daily", "Weekly", "Monthly"];
@@ -137,7 +129,7 @@ export default function AnalyticsPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card className="p-4">
           <MiniStat
             icon={Target}
@@ -152,15 +144,6 @@ export default function AnalyticsPage() {
             label="Average accuracy"
             value={`${averageAccuracy}%`}
             iconClassName="text-blue-600"
-          />
-        </Card>
-
-        <Card className="p-4">
-          <MiniStat
-            icon={Flame}
-            label="Study streak"
-            value="7 days"
-            iconClassName="text-orange-500"
           />
         </Card>
 
@@ -233,7 +216,7 @@ export default function AnalyticsPage() {
         </div>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div>
         <Card className="p-5">
           <SectionHeading title="Subject Performance" />
 
@@ -318,83 +301,6 @@ export default function AnalyticsPage() {
                 </div>
               </div>
             ))}
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Card className="p-5">
-          <SectionHeading
-            title="Weak Topics"
-            right={
-              <span className="text-xs text-slate-400">
-                Needs attention
-              </span>
-            }
-          />
-
-          <div className="space-y-3">
-            {weakTopics.map((topic) => {
-              const Icon = topic.icon;
-
-              return (
-                <div
-                  key={topic.topic}
-                  className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 dark:bg-white/5"
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-500/10">
-                    <Icon className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
-                      {topic.topic}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {topic.subject}
-                    </p>
-                  </div>
-
-                  <ProgressRing
-                    value={topic.accuracy}
-                    size={48}
-                    strokeWidth={5}
-                    trackClassName="text-slate-200 dark:text-slate-700"
-                    progressClassName="text-amber-500"
-                    label=""
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
-        <Card className="p-5">
-          <SectionHeading title="Learning Tips" />
-
-          <div className="space-y-3">
-            {learningTips.map((tip) => (
-              <div
-                key={tip}
-                className="flex gap-3 rounded-xl bg-purple-50 p-3 dark:bg-purple-500/10"
-              >
-                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-purple-600 dark:text-purple-400" />
-                <p className="text-sm leading-5 text-slate-700 dark:text-slate-200">
-                  {tip}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-            <Clock3 className="h-4 w-4" />
-            <span>Recommendations update as your quiz history changes.</span>
-          </div>
-
-          <div className="mt-4 flex items-center gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="h-4 w-4" />
-            <span>Keep practicing consistently.</span>
-            <ArrowRight className="ml-auto h-4 w-4" />
           </div>
         </Card>
       </div>

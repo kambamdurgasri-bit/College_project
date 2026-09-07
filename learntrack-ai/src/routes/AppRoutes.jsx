@@ -7,6 +7,7 @@ import LearningSpaceDetailsPage from "../pages/LearningSpaces/LearningSpaceDetai
 import TimetablePage from "../pages/Timetable/TimetablePage";
 import ComingSoonPage from "../pages/ComingSoonPage";
 import AnalyticsPage from "../pages/Analytics/AnalyticsPage";
+import AIRecommendationsPage from "../pages/AIRecommendations/AIRecommendationsPage";
 import QuizPage from "../pages/Quiz/QuizPage";
 
 export default function AppRoutes() {
@@ -34,10 +35,7 @@ export default function AppRoutes() {
         {/* Out-of-scope routes kept as placeholders so sidebar nav never 404s */}
         <Route path="/dashboard" element={<ComingSoonPage title="Dashboard" />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
-        <Route
-          path="/ai-recommendations"
-          element={<ComingSoonPage title="AI Recommendations" />}
-        />
+        <Route path="/ai-recommendations" element={<AIRecommendationsPage />} />
         <Route path="/profile" element={<ComingSoonPage title="Profile" />} />
         <Route path="/settings" element={<ComingSoonPage title="Settings" />} />
 
