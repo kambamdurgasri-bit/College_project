@@ -7,14 +7,27 @@ import LearningSpaceDetailsPage from "../pages/LearningSpaces/LearningSpaceDetai
 import TimetablePage from "../pages/Timetable/TimetablePage";
 import ComingSoonPage from "../pages/ComingSoonPage";
 import AnalyticsPage from "../pages/Analytics/AnalyticsPage";
+HEAD
+import SplashPage from "../pages/Auth/SplashPage";
+import LoginPage from "../pages/Auth/LoginPage";
+import RegisterPage from "../pages/Auth/RegisterPage";
+import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
+
 import AIRecommendationsPage from "../pages/AIRecommendations/AIRecommendationsPage";
 import QuizPage from "../pages/Quiz/QuizPage";
+origin/main
 
 export default function AppRoutes() {
   return (
     <Routes>
+      {/* Module 1: Authentication (public, outside AppLayout/sidebar) */}
+      <Route path="/splash" element={<SplashPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
       <Route element={<AppLayout />}>
-        <Route path="/" element={<Navigate to="/learning-spaces" replace />} />
+        <Route path="/" element={<Navigate to="/splash" replace />} />
 
         {/* Module 3: Learning Spaces */}
         <Route path="/learning-spaces" element={<LearningSpacesPage />} />

@@ -7,20 +7,36 @@ import {
   weekDays,
   timetableWeekLabel,
 } from "../mock-data/timetable";
-
-const SIMULATED_DELAY_MS = 400;
-
-const delay = (value) =>
-  new Promise((resolve) => setTimeout(() => resolve(value), SIMULATED_DELAY_MS));
+import { apiRequest } from "./api";
 
 export const timetableService = {
   // TODO: GET /api/timetable?week=:weekStart
   async getWeek() {
-    return delay({ weekLabel: timetableWeekLabel, weekDays, events: scheduleEvents });
+    return apiRequest(
+      "/timetable",
+      { method: "GET" },
+      {
+        weekLabel: timetableWeekLabel,
+        weekDays,
+        events: scheduleEvents,
+      },
+    );
   },
 
   // TODO: POST /api/timetable
   async createEvent(payload) {
-    return delay({ id: `event-${Date.now()}`, ...payload });
+    const created = await apiRequest(
+      "/timetable",
+      {
+        method: "POST",
+        body: payload,
+      },
+      {
+        id: `event-${Date.now()}`,
+        ...payload,
+      },
+    );
+
+    return created;
   },
 };
