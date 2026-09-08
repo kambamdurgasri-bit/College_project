@@ -7,7 +7,6 @@ import LearningSpaceDetailsPage from "../pages/LearningSpaces/LearningSpaceDetai
 import TimetablePage from "../pages/Timetable/TimetablePage";
 import ComingSoonPage from "../pages/ComingSoonPage";
 import AnalyticsPage from "../pages/Analytics/AnalyticsPage";
-HEAD
 import SplashPage from "../pages/Auth/SplashPage";
 import LoginPage from "../pages/Auth/LoginPage";
 import RegisterPage from "../pages/Auth/RegisterPage";
@@ -15,7 +14,6 @@ import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
 
 import AIRecommendationsPage from "../pages/AIRecommendations/AIRecommendationsPage";
 import QuizPage from "../pages/Quiz/QuizPage";
-origin/main
 
 export default function AppRoutes() {
   return (
