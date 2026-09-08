@@ -32,7 +32,7 @@ export default function RegisterPage() {
     e.preventDefault();
     if (validate()) {
       // TODO(backend): replace with real POST /api/auth/register once Phase 2 lands.
-      navigate("/learning-spaces");
+      navigate("/dashboard");
     }
   };
 

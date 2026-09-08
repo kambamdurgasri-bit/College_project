@@ -28,7 +28,7 @@ export default function LoginPage() {
     e.preventDefault();
     if (validate()) {
       // TODO(backend): replace with real POST /api/auth/login once Phase 2 lands.
-      navigate("/learning-spaces");
+      navigate("/dashboard");
     }
   };
 

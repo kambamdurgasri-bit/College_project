@@ -11,7 +11,8 @@ import { apiRequest } from "./api";
 
 export const learningSpaceService = {
   async list() {
-    return apiRequest("/learning-spaces", { method: "GET" }, learningSpaces);
+    const result = await apiRequest("/learning-spaces", { method: "GET" }, learningSpaces);
+    return Array.isArray(result) ? result : learningSpaces;
   },
 
   async getById(id) {
