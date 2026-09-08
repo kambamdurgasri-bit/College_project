@@ -6,6 +6,9 @@ import EditLearningSpacePage from "../pages/LearningSpaces/EditLearningSpacePage
 import LearningSpaceDetailsPage from "../pages/LearningSpaces/LearningSpaceDetailsPage";
 import TimetablePage from "../pages/Timetable/TimetablePage";
 import ComingSoonPage from "../pages/ComingSoonPage";
+import ProfilePage from "../pages/Profile/ProfilePage";
+import EditProfilePage from "../pages/Profile/EditProfilePage";
+import SettingsPage from "../pages/SettingsPage";
 
 export default function AppRoutes() {
   return (
@@ -22,6 +25,11 @@ export default function AppRoutes() {
         {/* Module 3: Timetable */}
         <Route path="/timetable" element={<TimetablePage />} />
 
+        {/* Module 2: Profile */}
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/edit" element={<EditProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+
         {/* Out-of-scope routes kept as placeholders so sidebar nav never 404s */}
         <Route path="/dashboard" element={<ComingSoonPage title="Dashboard" />} />
         <Route path="/topic-quiz" element={<ComingSoonPage title="Topic Quiz" />} />
@@ -31,8 +39,6 @@ export default function AppRoutes() {
           path="/ai-recommendations"
           element={<ComingSoonPage title="AI Recommendations" />}
         />
-        <Route path="/profile" element={<ComingSoonPage title="Profile" />} />
-        <Route path="/settings" element={<ComingSoonPage title="Settings" />} />
 
         <Route path="*" element={<Navigate to="/learning-spaces" replace />} />
       </Route>
