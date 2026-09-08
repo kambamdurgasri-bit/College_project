@@ -32,7 +32,7 @@ export async function apiRequest(path, options = {}, fallbackValue = undefined) 
   try {
     const response = await fetch(url, config);
 
-    if (response.status === 204 || response.headers.get("content-length") === "0") {
+    if (response.status === 204) {
       return null;
     }
 
@@ -51,7 +51,7 @@ export async function apiRequest(path, options = {}, fallbackValue = undefined) 
 
     return payload;
   } catch (error) {
-    if (fallbackValue !== undefined && isNetworkError(error)) {
+    if (fallbackValue !== undefined) {
       return fallbackValue;
     }
     throw error;
