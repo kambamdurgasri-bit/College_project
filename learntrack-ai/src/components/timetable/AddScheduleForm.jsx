@@ -31,7 +31,7 @@ export default function AddScheduleForm({ onSubmit, onCancel, submitting }) {
         <select
           value={subjectId}
           onChange={(e) => setSubjectId(e.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-white/5 dark:text-slate-100"
+          className="w-full rounded-xl border border-slate-200 bg-surface-input px-3.5 py-2.5 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-white/5 dark:text-slate-100"
         >
           {learningSpaces.map((s) => (
             <option key={s.id} value={s.id}>
@@ -49,7 +49,7 @@ export default function AddScheduleForm({ onSubmit, onCancel, submitting }) {
           <select
             value={dayIndex}
             onChange={(e) => setDayIndex(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-white/5 dark:text-slate-100"
+            className="w-full rounded-xl border border-slate-200 bg-surface-input px-3.5 py-2.5 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-white/5 dark:text-slate-100"
           >
             {weekDays.map((d) => (
               <option key={d.dayIndex} value={d.dayIndex}>
@@ -66,7 +66,7 @@ export default function AddScheduleForm({ onSubmit, onCancel, submitting }) {
             type="time"
             value={time}
             onChange={(e) => setTime(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-white/5 dark:text-slate-100"
+            className="w-full rounded-xl border border-slate-200 bg-surface-input px-3.5 py-2.5 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-white/5 dark:text-slate-100"
           />
         </div>
       </div>

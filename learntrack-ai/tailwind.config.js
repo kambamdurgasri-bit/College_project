@@ -19,8 +19,10 @@ export default {
           900: "#4C1D95",
         },
         surface: {
-          light: "#FFFFFF",
-          DEFAULT: "#F7F7FB",
+          light: "#FCFCFE",
+          DEFAULT: "#F5F5FA",
+          sidebar: "#F8F8FC",
+          input: "#FAFAFD",
           dark: "#15151F",
           "dark-card": "#1B1B29",
         },

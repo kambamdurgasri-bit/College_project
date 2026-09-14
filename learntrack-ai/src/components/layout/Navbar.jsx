@@ -6,7 +6,7 @@ export default function Navbar({ onMenuClick }) {
   const { theme, toggleTheme } = useThemeStore();
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-slate-800/80 dark:bg-surface-dark md:justify-end md:border-none md:bg-transparent md:px-0 md:py-6">
+    <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-surface-light px-4 dark:border-slate-800/80 dark:bg-surface-dark md:justify-end md:border-none md:bg-transparent md:px-0 md:py-6">
       <button
         type="button"
         onClick={onMenuClick}

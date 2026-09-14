@@ -16,7 +16,7 @@ export default function WeekView({ weekDays, eventsByDay, todayIndex, onEventCli
   const gridHeight = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark">
+    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-surface-light shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark">
       <div className="flex min-w-[820px]">
         {/* Time axis */}
         <div className="w-16 shrink-0 border-r border-slate-100 dark:border-white/5">

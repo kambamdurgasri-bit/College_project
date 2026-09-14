@@ -31,7 +31,7 @@ const TREND_RANGES = ["Daily", "Weekly", "Monthly"];
 function Card({ children, className = "" }) {
   return (
     <section
-      className={`rounded-2xl border border-slate-200 bg-white shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark ${className}`}
+      className={`rounded-2xl border border-slate-200 bg-surface-light shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark ${className}`}
     >
       {children}
     </section>
@@ -69,7 +69,7 @@ function ChartTooltip({ active, payload, label }) {
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-900">
+    <div className="rounded-xl border border-slate-200 bg-surface-light px-3 py-2 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-900">
       <p className="font-semibold text-slate-900 dark:text-white">{label}</p>
       {payload.map((entry) => (
         <p key={entry.dataKey} className="mt-1 text-slate-600 dark:text-slate-300">

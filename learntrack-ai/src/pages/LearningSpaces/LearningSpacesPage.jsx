@@ -16,7 +16,7 @@ const TABS = [
 
 function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800/80 dark:bg-surface-dark-card">
+    <div className="animate-pulse rounded-2xl border border-slate-200 bg-surface-light p-5 dark:border-slate-800/80 dark:bg-surface-dark-card">
       <div className="mb-4 flex items-start justify-between">
         <div className="h-11 w-11 rounded-xl bg-slate-200 dark:bg-white/10" />
         <div className="h-4 w-4 rounded bg-slate-200 dark:bg-white/10" />
