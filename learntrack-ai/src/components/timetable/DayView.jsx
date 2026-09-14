@@ -14,7 +14,7 @@ export default function DayView({ day, events, onEventClick }) {
   );
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark">
+    <div className="rounded-2xl border border-slate-200 bg-surface-light p-5 shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark">
       <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-200">
         {day.label} {day.date}
       </h3>

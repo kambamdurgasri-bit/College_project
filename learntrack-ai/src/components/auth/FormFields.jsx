@@ -12,7 +12,7 @@ export function SampleBadge({ text = "Frontend only \u00b7 backend not connected
 export function AuthCard({ children, className = "" }) {
   return (
     <div
-      className={`rounded-2xl bg-white p-5 shadow-card dark:border dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark ${className}`}
+      className={`rounded-2xl bg-surface-light p-5 shadow-card dark:border dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark ${className}`}
     >
       {children}
     </div>

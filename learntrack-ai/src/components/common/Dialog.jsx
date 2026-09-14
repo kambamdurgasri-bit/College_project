@@ -14,7 +14,7 @@ export default function Dialog({ open, onClose, title, description, children }) 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/50" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-surface-dark-card">
+      <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-surface-light p-6 shadow-xl dark:border-slate-700 dark:bg-surface-dark-card">
         <div className="mb-4 flex items-start justify-between">
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">{title}</h2>

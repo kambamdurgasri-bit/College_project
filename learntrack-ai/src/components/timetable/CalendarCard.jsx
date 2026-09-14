@@ -18,7 +18,7 @@ export default function CalendarCard({ day, events, isToday = false, onEventClic
   return (
     <div className="flex min-w-[130px] flex-1 flex-col border-l border-slate-100 first:border-l-0 dark:border-white/5">
       <div
-        className={`sticky top-0 z-10 border-b border-slate-100 bg-white py-3 text-center dark:border-white/5 dark:bg-surface-dark-card ${
+        className={`sticky top-0 z-10 border-b border-slate-100 bg-surface-light py-3 text-center dark:border-white/5 dark:bg-surface-dark-card ${
           isToday ? "text-brand-600 dark:text-brand-400" : "text-slate-700 dark:text-slate-200"
         }`}
       >

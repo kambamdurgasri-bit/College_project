@@ -24,7 +24,7 @@ export default function SubjectCard({ space, onDelete }) {
   return (
     <div
       onClick={() => navigate(`/learning-spaces/${space.id}`)}
-      className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark"
+      className="group cursor-pointer rounded-2xl border border-slate-200 bg-surface-light p-5 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark"
     >
       <div className="mb-4 flex items-start justify-between">
         <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${theme.softBg}`}>

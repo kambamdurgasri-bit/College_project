@@ -27,7 +27,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar({ onNavigate }) {
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800/80 dark:bg-surface-dark">
+    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-surface-sidebar dark:border-slate-800/80 dark:bg-surface-dark">
       <div className="flex items-center gap-2 px-6 py-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600">
           <GraduationCap className="h-5 w-5 text-white" />

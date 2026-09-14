@@ -25,7 +25,7 @@ const toneStyles = {
 function Card({ children, className = "" }) {
   return (
     <section
-      className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark ${className}`}
+      className={`rounded-2xl border border-slate-200 bg-surface-light p-5 shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark ${className}`}
     >
       {children}
     </section>

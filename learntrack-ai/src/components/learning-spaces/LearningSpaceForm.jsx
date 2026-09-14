@@ -48,7 +48,7 @@ export default function LearningSpaceForm({
           value={values.name}
           onChange={(e) => update("name", e.target.value)}
           placeholder="e.g. Artificial Intelligence"
-          className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-white/5 dark:text-slate-100 dark:placeholder:text-slate-500"
+          className="w-full rounded-xl border border-slate-200 bg-surface-input px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-white/5 dark:text-slate-100 dark:placeholder:text-slate-500"
         />
         {errors.name && <p className="mt-1 text-xs text-rose-500">{errors.name}</p>}
       </div>
@@ -61,7 +61,7 @@ export default function LearningSpaceForm({
           <select
             value={values.category}
             onChange={(e) => update("category", e.target.value)}
-            className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-white/5 dark:text-slate-100"
+            className="w-full appearance-none rounded-xl border border-slate-200 bg-surface-input px-3.5 py-2.5 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-white/5 dark:text-slate-100"
           >
             <option value="">Select Category</option>
             {CATEGORY_OPTIONS.map((cat) => (

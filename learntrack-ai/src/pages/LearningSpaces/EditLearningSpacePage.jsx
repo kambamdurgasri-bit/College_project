@@ -66,7 +66,7 @@ export default function EditLearningSpacePage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark">
+      <div className="rounded-2xl border border-slate-200 bg-surface-light p-6 shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark">
         {status === "loading" && (
           <div className="animate-pulse space-y-6">
             <div className="h-10 w-full rounded-xl bg-slate-200 dark:bg-white/10" />

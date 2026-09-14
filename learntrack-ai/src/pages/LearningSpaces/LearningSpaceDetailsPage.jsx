@@ -41,7 +41,7 @@ const ACTIVITY_ICON = {
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs shadow-md dark:border-slate-700 dark:bg-surface-dark-card">
+    <div className="rounded-lg border border-slate-200 bg-surface-light px-3 py-1.5 text-xs shadow-md dark:border-slate-700 dark:bg-surface-dark-card">
       <p className="font-medium text-slate-700 dark:text-slate-200">{label}</p>
       <p className="text-brand-600 dark:text-brand-400">{payload[0].value}%</p>
     </div>
@@ -174,7 +174,7 @@ export default function LearningSpaceDetailsPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark lg:col-span-2">
+            <div className="rounded-2xl border border-slate-200 bg-surface-light p-5 shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark lg:col-span-2">
               <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-200">
                 Progress Overview
               </h3>
