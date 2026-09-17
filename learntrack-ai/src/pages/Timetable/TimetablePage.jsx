@@ -26,9 +26,9 @@ export default function TimetablePage() {
       .getWeek()
       .then((data) => {
         if (cancelled) return;
-        setWeekLabel(data.weekLabel);
-        setWeekDays(data.weekDays);
-        setEvents(data.events);
+        setWeekLabel(data.weekLabel??"");
+        setWeekDays(data.weekDays??[]);
+        setEvents(data.events??[]);
         setStatus("success");
       })
       .catch(() => {
