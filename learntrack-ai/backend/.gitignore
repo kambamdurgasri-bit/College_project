@@ -1,3 +1,14 @@
 node_modules/
 dist/
 .env
+
+# AI editor config folders
+.claude/
+.cursor/
+.devin/
+.agents/
+
+# Backup & junk files
+*.bak
+*.log
+prisma-8.md
