@@ -28,6 +28,27 @@ export async function create(req, res, next) {
   }
 }
 
+export async function createAI(req, res, next) {
+  try {
+    const { learningSpaceId, topic, difficulty, notes, questionCount } = req.body;
+    if (!learningSpaceId || !topic || !difficulty) {
+      return res.status(400).json({ error: "learningSpaceId, topic and difficulty are required." });
+    }
+
+    const quiz = await service.createAIQuiz(req.user.id, {
+      learningSpaceId: Number(learningSpaceId),
+      topic,
+      difficulty,
+      notes,
+      questionCount,
+    });
+    if (!quiz) return res.status(404).json({ error: "Learning space not found." });
+    res.status(201).json(quiz);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function listForLearningSpace(req, res, next) {
   try {
     const learningSpaceId = Number(req.query.learningSpaceId);

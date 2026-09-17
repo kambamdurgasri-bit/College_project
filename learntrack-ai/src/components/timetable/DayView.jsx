@@ -9,6 +9,7 @@ const formatTime = (hour, minute) => {
 };
 
 export default function DayView({ day, events, onEventClick }) {
+  if (!day) return null;
   const sorted = [...events].sort(
     (a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute)
   );

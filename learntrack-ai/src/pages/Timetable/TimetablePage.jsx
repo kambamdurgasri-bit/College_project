@@ -139,34 +139,38 @@ export default function TimetablePage() {
         </div>
       )}
 
-      {status === "success" && view === "Week" && (
-        <WeekView weekDays={weekDays} eventsByDay={eventsByDay} todayIndex={-1} />
-      )}
+      {status === "success" && view === "Day" && weekDays.length === 0 && (
+  <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center dark:border-slate-700 dark:bg-surface-dark-card">
+    <p className="text-sm text-slate-500 dark:text-slate-400">
+      No timetable set up yet. Add a schedule to get started.
+    </p>
+  </div>
+)}
 
-      {status === "success" && view === "Day" && (
-        <div>
-          <div className="mb-4 flex flex-wrap gap-2">
-            {weekDays.map((d) => (
-              <button
-                key={d.dayIndex}
-                type="button"
-                onClick={() => setActiveDayIndex(d.dayIndex)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                  activeDayIndex === d.dayIndex
-                    ? "bg-brand-600 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-                }`}
-              >
-                {d.label} {d.date}
-              </button>
-            ))}
-          </div>
-          <DayView
-            day={weekDays.find((d) => d.dayIndex === activeDayIndex)}
-            events={eventsByDay[activeDayIndex] || []}
-          />
-        </div>
-      )}
+{status === "success" && view === "Day" && weekDays.length > 0 && (
+  <div>
+    <div className="mb-4 flex flex-wrap gap-2">
+      {weekDays.map((d) => (
+        <button
+          key={d.dayIndex}
+          type="button"
+          onClick={() => setActiveDayIndex(d.dayIndex)}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+            activeDayIndex === d.dayIndex
+              ? "bg-brand-600 text-white"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+          }`}
+        >
+          {d.label} {d.date}
+        </button>
+      ))}
+    </div>
+    <DayView
+      day={weekDays.find((d) => d.dayIndex === activeDayIndex)}
+      events={eventsByDay[activeDayIndex] || []}
+    />
+  </div>
+)}ss
 
       {status === "success" && (
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2">

@@ -1,11 +1,11 @@
 import prisma from "../../lib/prisma.js";
 import * as learningSpaces from "../learning-spaces/learningSpaces.service.js";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 // --- Quiz creation -----------------------------------------------------
-// NOTE: This is manual/topic-based quiz creation for Phase 7. AI-generated
-// quizzes (Google Gemini, Phase 8) is a separate future addition — plug it
-// in as another function here that builds the same `questions` shape and
-// reuses `createQuiz` below, rather than duplicating the storage logic.
 
 export async function createQuiz(userId, { learningSpaceId, topic, difficulty, questions }) {
   const space = await learningSpaces.getOwned(userId, learningSpaceId);
@@ -26,6 +26,45 @@ export async function createQuiz(userId, { learningSpaceId, topic, difficulty, q
     },
     include: { questions: true },
   });
+}
+
+// --- AI (Gemini) quiz generation — Phase 8 --------------------------------
+
+async function generateQuestionsWithGemini({ topic, difficulty, notes, questionCount = 5 }) {
+  const source = notes
+    ? `Base the questions strictly on this content:\n"""${notes}"""`
+    : `Base the questions on the topic: "${topic}"`;
+
+  const prompt = `You are a quiz generator for a study app.
+${source}
+Difficulty level: ${difficulty}.
+
+Generate exactly ${questionCount} short-answer questions (one correct answer each, a few words long).
+Respond with ONLY valid JSON (no markdown, no backticks, no extra text), in this exact shape:
+
+[
+  { "questionText": "string", "correctAnswer": "string" }
+]`;
+
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
+  const cleaned = text.replace(/```json|```/g, "").trim();
+
+  let questions;
+  try {
+    questions = JSON.parse(cleaned);
+  } catch (err) {
+    throw new Error("Gemini returned invalid JSON: " + text.slice(0, 200));
+  }
+  if (!Array.isArray(questions) || questions.length === 0) {
+    throw new Error("Gemini returned no questions.");
+  }
+  return questions;
+}
+
+export async function createAIQuiz(userId, { learningSpaceId, topic, difficulty, notes, questionCount }) {
+  const questions = await generateQuestionsWithGemini({ topic, difficulty, notes, questionCount });
+  return createQuiz(userId, { learningSpaceId, topic, difficulty, questions });
 }
 
 export async function listForLearningSpace(userId, learningSpaceId) {
