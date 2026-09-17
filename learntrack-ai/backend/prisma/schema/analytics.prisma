@@ -1,0 +1,21 @@
+// OWNER: Madhavi — Analytics, AI Recommendations, Profile, Settings.
+// Recommendations translated from the old contract.prisma as a starting
+// point. There is no Progress/ProgressSnapshot model yet — Madhavi should
+// add it here for the Analytics module (Rule doc lists Progress as a main
+// entity but it was never defined in the original schema).
+
+model Recommendations {
+  id                 Int      @id @default(autoincrement())
+  userId             Int      @map("user_id")
+  recommendationType String   @map("recommendation_type") @db.VarChar(50)
+  recommendation     String
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  user               Users    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("recommendations")
+}
+
+// TODO (Madhavi): add a Progress / ProgressSnapshot model here for the
+// Analytics & Progress module (daily/weekly/monthly tracking).

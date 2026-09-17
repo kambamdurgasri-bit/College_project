@@ -1,0 +1,21 @@
+// OWNER: Pravalika (Authentication module).
+// This is a placeholder so the other schema files (which reference Users
+// for foreign keys) compile and `prisma migrate dev` works before her
+// auth backend is pushed. Pravalika: replace this with your real model —
+// keep the model name `Users` and the `id` field name/type the same, or
+// update learning.prisma / analytics.prisma to match if you rename them.
+
+model Users {
+  id              Int               @id @default(autoincrement())
+  name            String            @db.VarChar(100)
+  email           String            @unique @db.VarChar(255)
+  passwordHash    String            @map("password_hash") @db.VarChar(255)
+  phoneNumber     String?           @map("phone_number") @db.VarChar(20)
+
+  learningSpaces  LearningSpaces[]
+  timetables      Timetables[]
+  quizAttempts    QuizAttempts[]
+  recommendations Recommendations[]
+
+  @@map("users")
+}
