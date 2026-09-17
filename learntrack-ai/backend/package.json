@@ -18,7 +18,8 @@
     "schema": "prisma/schema"
   },
   "dependencies": {
-    "@prisma/client": "^6",
+    "@prisma/client": "^6.19.3",
+    "@prisma/extension-accelerate": "^3.0.1",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -27,6 +28,6 @@
   "devDependencies": {
     "@types/node": "^26.5.1",
     "nodemon": "^3.1.14",
-    "prisma": "^6"
+    "prisma": "^6.19.3"
   }
 }
