@@ -1,0 +1,89 @@
+// OWNER: Durga — Dashboard, Learning Spaces, Timetable, Topic Quiz, Quiz History.
+// Translated from the old backend/prisma/contract.prisma (Prisma 8 RC) into
+// standard Prisma schema language. Table names/columns are unchanged so no
+// existing data or naming would need to migrate later.
+
+model LearningSpaces {
+  id      Int       @id @default(autoincrement())
+  userId  Int       @map("user_id")
+  name    String    @db.VarChar(100)
+
+  user    Users     @relation(fields: [userId], references: [id])
+  quizzes Quizzes[]
+
+  @@index([userId])
+  @@map("learning_spaces")
+}
+
+model Timetables {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  day       String   @db.VarChar(20)
+  subject   String   @db.VarChar(100)
+  startTime String @map("start_time") @db.VarChar(5)
+  endTime   String @map("end_time") @db.VarChar(5)
+
+  user      Users    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("timetables")
+}
+
+model Quizzes {
+  id              Int            @id @default(autoincrement())
+  learningSpaceId Int            @map("learning_space_id")
+  topic           String         @db.VarChar(100)
+  difficulty      String         @db.VarChar(20)
+  quizType        String         @default("TOPIC") @map("quiz_type") @db.VarChar(20)
+
+  learningSpace   LearningSpaces @relation(fields: [learningSpaceId], references: [id])
+  questions       Questions[]
+  quizAttempts    QuizAttempts[]
+
+  @@index([learningSpaceId])
+  @@map("quizzes")
+}
+
+model Questions {
+  questionId    Int              @id @default(autoincrement()) @map("question_id")
+  quizId        Int              @map("quiz_id")
+  questionText  String           @map("question_text")
+  correctAnswer String           @map("correct_answer")
+
+  quiz          Quizzes          @relation(fields: [quizId], references: [id])
+  attemptAnswers AttemptAnswers[]
+
+  @@index([quizId])
+  @@map("questions")
+}
+
+model QuizAttempts {
+  quizAttemptId  Int              @id @default(autoincrement()) @map("quiz_attempt_id")
+  quizId         Int              @map("quiz_id")
+  userId         Int              @map("user_id")
+  attemptedAt    DateTime         @default(now()) @map("attempted_at")
+  score          Int
+
+  quiz           Quizzes          @relation(fields: [quizId], references: [id])
+  user           Users            @relation(fields: [userId], references: [id])
+  attemptAnswers AttemptAnswers[]
+
+  @@index([quizId])
+  @@index([userId])
+  @@map("quiz_attempts")
+}
+
+model AttemptAnswers {
+  id             Int          @id @default(autoincrement())
+  quizAttemptId  Int          @map("quiz_attempt_id")
+  questionId     Int          @map("question_id")
+  selectedAnswer String       @map("selected_answer")
+
+  question       Questions    @relation(fields: [questionId], references: [questionId])
+  quizAttempt    QuizAttempts @relation(fields: [quizAttemptId], references: [quizAttemptId])
+
+  @@unique([quizAttemptId, questionId])
+  @@index([questionId])
+  @@index([quizAttemptId])
+  @@map("attempt_answers")
+}
