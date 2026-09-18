@@ -11,10 +11,20 @@ model Users {
   quizAttempts    QuizAttempts[]
   recommendations Recommendations[]
   timetables      Timetables[]
+  passwordResets  PasswordResets[]
 
   @@map("users")
 }
+model PasswordResets {
+  id        Int      @id(map: "password_resets_pkey") @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     VarChar(255) @unique(map: "password_resets_token_key")
+  expiresAt Timestamp @map("expires_at")
+  user      Users    @relation(fields: [userId], references: [id], map: "password_resets_user_id_fkey")
 
+  @@index([userId], map: "idx_password_resets_user_id")
+  @@map("password_resets")
+}
 model LearningSpaces {
   id      Int          @id(map: "learning_spaces_pkey") @default(autoincrement())
   userId  Int          @map("user_id")
@@ -37,7 +47,7 @@ model Quizzes {
   learningSpace   LearningSpaces @relation(fields: [learningSpaceId], references: [id], map: "quizzes_learning_space_id_fkey")
 
   @@index([learningSpaceId], map: "idx_quizzes_learning_space_id")
-  @@check(expression: "((quiz_type)::text = ANY ((ARRAY['TOPIC'::character varying, 'PDF'::character varying])::text[]))", map: "quizzes_quiz_type_check")
+  //@@check(expression: "((quiz_type)::text = ANY ((ARRAY['TOPIC'::character varying, 'PDF'::character varying])::text[]))", map: "quizzes_quiz_type_check")
   @@map("quizzes")
 }
 

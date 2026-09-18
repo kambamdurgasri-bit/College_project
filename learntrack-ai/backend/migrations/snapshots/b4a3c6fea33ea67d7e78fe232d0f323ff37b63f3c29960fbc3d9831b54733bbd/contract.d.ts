@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'2cedc2b961693cb256df67f0a11f4c404ee269c33139e8af11d4e0d0abf1e7a0'>;
+  StorageHashBase<'b4a3c6fea33ea67d7e78fe232d0f323ff37b63f3c29960fbc3d9831b54733bbd'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
@@ -252,12 +252,6 @@ export type FieldOutputTypes = {
       readonly userId: CodecTypes['pg/int4@1']['output'];
       readonly name: Varchar<100>;
     };
-    readonly PasswordResets: {
-      readonly id: CodecTypes['pg/int4@1']['output'];
-      readonly userId: CodecTypes['pg/int4@1']['output'];
-      readonly token: Varchar<255>;
-      readonly expiresAt: CodecTypes['pg/timestamp-temporal@1']['output'];
-    };
     readonly Questions: {
       readonly questionId: CodecTypes['pg/int4@1']['output'];
       readonly quizId: CodecTypes['pg/int4@1']['output'];
@@ -315,12 +309,6 @@ export type FieldInputTypes = {
       readonly userId: CodecTypes['pg/int4@1']['input'];
       readonly name: CodecTypes['sql/varchar@1']['input'];
     };
-    readonly PasswordResets: {
-      readonly id: CodecTypes['pg/int4@1']['input'];
-      readonly userId: CodecTypes['pg/int4@1']['input'];
-      readonly token: CodecTypes['sql/varchar@1']['input'];
-      readonly expiresAt: CodecTypes['pg/timestamp-temporal@1']['input'];
-    };
     readonly Questions: {
       readonly questionId: CodecTypes['pg/int4@1']['input'];
       readonly quizId: CodecTypes['pg/int4@1']['input'];
@@ -376,12 +364,6 @@ export type StorageColumnTypes = {
     readonly learning_spaces: {
       readonly id: CodecTypes['pg/int4@1']['output'];
       readonly name: Varchar<100>;
-      readonly user_id: CodecTypes['pg/int4@1']['output'];
-    };
-    readonly password_resets: {
-      readonly expires_at: CodecTypes['pg/timestamp-temporal@1']['output'];
-      readonly id: CodecTypes['pg/int4@1']['output'];
-      readonly token: Varchar<255>;
       readonly user_id: CodecTypes['pg/int4@1']['output'];
     };
     readonly questions: {
@@ -441,12 +423,6 @@ export type StorageColumnInputTypes = {
       readonly name: CodecTypes['sql/varchar@1']['input'];
       readonly user_id: CodecTypes['pg/int4@1']['input'];
     };
-    readonly password_resets: {
-      readonly expires_at: CodecTypes['pg/timestamp-temporal@1']['input'];
-      readonly id: CodecTypes['pg/int4@1']['input'];
-      readonly token: CodecTypes['sql/varchar@1']['input'];
-      readonly user_id: CodecTypes['pg/int4@1']['input'];
-    };
     readonly questions: {
       readonly correct_answer: CodecTypes['pg/text@1']['input'];
       readonly question_id: CodecTypes['pg/int4@1']['input'];
@@ -500,20 +476,10 @@ export namespace Models {
     passwordHash: Varchar<255>;
     phoneNumber: Varchar<20> | null;
     learningSpaces: public_LearningSpaces[];
-    passwordResets: public_PasswordResets[];
     quizAttempts: public_QuizAttempts[];
     recommendations: public_Recommendations[];
     timetables: public_Timetables[];
-    readonly [RelationKeys]?:
-      'learningSpaces' | 'passwordResets' | 'quizAttempts' | 'recommendations' | 'timetables';
-  };
-  export type public_PasswordResets = {
-    id: CodecTypes['pg/int4@1']['output'];
-    userId: CodecTypes['pg/int4@1']['output'];
-    token: Varchar<255>;
-    expiresAt: CodecTypes['pg/timestamp-temporal@1']['output'];
-    user: public_Users;
-    readonly [RelationKeys]?: 'user';
+    readonly [RelationKeys]?: 'learningSpaces' | 'quizAttempts' | 'recommendations' | 'timetables';
   };
   export type public_LearningSpaces = {
     id: CodecTypes['pg/int4@1']['output'];
@@ -587,7 +553,6 @@ export namespace Models {
 export declare const models: {
   public: {
     Users: Models.public_Users;
-    PasswordResets: Models.public_PasswordResets;
     LearningSpaces: Models.public_LearningSpaces;
     Quizzes: Models.public_Quizzes;
     Questions: Models.public_Questions;
@@ -742,67 +707,6 @@ type ContractBase = Omit<
                     readonly columns: readonly ['id'];
                   };
                   readonly name: 'learning_spaces_user_id_fkey';
-                },
-              ];
-            };
-            readonly password_resets: {
-              columns: {
-                readonly id: {
-                  readonly nativeType: 'int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'function';
-                    readonly expression: 'autoincrement()';
-                  };
-                };
-                readonly user_id: {
-                  readonly nativeType: 'int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                };
-                readonly token: {
-                  readonly nativeType: 'character varying';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly nullable: false;
-                  readonly typeParams: { readonly length: 255 };
-                };
-                readonly expires_at: {
-                  readonly nativeType: 'timestamp';
-                  readonly codecId: 'pg/timestamp-temporal@1';
-                  readonly nullable: false;
-                };
-              };
-              primaryKey: {
-                readonly columns: readonly ['id'];
-                readonly name: 'password_resets_pkey';
-              };
-              uniques: readonly [
-                {
-                  readonly columns: readonly ['token'];
-                  readonly name: 'password_resets_token_key';
-                },
-              ];
-              indexes: readonly [
-                {
-                  readonly name: 'idx_password_resets_user_id';
-                  readonly columns: readonly ['user_id'];
-                  readonly unique: false;
-                },
-              ];
-              foreignKeys: readonly [
-                {
-                  readonly source: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'password_resets';
-                    readonly columns: readonly ['user_id'];
-                  };
-                  readonly target: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'users';
-                    readonly columns: readonly ['id'];
-                  };
-                  readonly name: 'password_resets_user_id_fkey';
                 },
               ];
             };
@@ -1184,10 +1088,6 @@ type ContractBase = Omit<
   readonly targetFamily: 'sql';
   readonly roots: {
     readonly users: { readonly namespace: 'public' & NamespaceId; readonly model: 'Users' };
-    readonly password_resets: {
-      readonly namespace: 'public' & NamespaceId;
-      readonly model: 'PasswordResets';
-    };
     readonly learning_spaces: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'LearningSpaces';
@@ -1322,57 +1222,6 @@ type ContractBase = Omit<
                 readonly id: { readonly column: 'id' };
                 readonly userId: { readonly column: 'user_id' };
                 readonly name: { readonly column: 'name' };
-              };
-            };
-          };
-          readonly PasswordResets: {
-            readonly fields: {
-              readonly id: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly userId: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly token: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'sql/varchar@1';
-                  readonly typeParams: { readonly length: 255 };
-                };
-              };
-              readonly expiresAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamp-temporal@1';
-                };
-              };
-            };
-            readonly relations: {
-              readonly user: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'Users';
-                };
-                readonly cardinality: 'N:1';
-                readonly nullable: false;
-                readonly on: {
-                  readonly localFields: readonly ['userId'];
-                  readonly targetFields: readonly ['id'];
-                };
-              };
-            };
-            readonly storage: {
-              readonly table: 'password_resets';
-              readonly namespaceId: 'public';
-              readonly fields: {
-                readonly id: { readonly column: 'id' };
-                readonly userId: { readonly column: 'user_id' };
-                readonly token: { readonly column: 'token' };
-                readonly expiresAt: { readonly column: 'expires_at' };
               };
             };
           };
@@ -1751,17 +1600,6 @@ type ContractBase = Omit<
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
                   readonly model: 'LearningSpaces';
-                };
-                readonly cardinality: '1:N';
-                readonly on: {
-                  readonly localFields: readonly ['id'];
-                  readonly targetFields: readonly ['userId'];
-                };
-              };
-              readonly passwordResets: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'PasswordResets';
                 };
                 readonly cardinality: '1:N';
                 readonly on: {

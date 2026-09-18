@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Mail } from "lucide-react";
 import AuthShell from "../../components/auth/AuthShell";
+import { useAuthStore } from "../../store/authStore";
 import {
   SampleBadge,
   FieldLabel,
@@ -12,9 +13,11 @@ import {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   const validate = () => {
     const next = {};
@@ -24,11 +27,16 @@ export default function LoginPage() {
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validate()) {
-      // TODO(backend): replace with real POST /api/auth/login once Phase 2 lands.
+    if (!validate()) return;
+    setSubmitting(true);
+    const result = await login({ email, password });
+    setSubmitting(false);
+    if (result.success) {
       navigate("/dashboard");
+    } else {
+      setErrors((prev) => ({ ...prev, password: result.error }));
     }
   };
 
@@ -80,7 +88,7 @@ export default function LoginPage() {
           </button>
         </div>
 
-        <PrimaryButton type="submit">
+        <PrimaryButton type="submit" disabled={submitting}>
           Log In <ArrowRight size={15} />
         </PrimaryButton>
 
