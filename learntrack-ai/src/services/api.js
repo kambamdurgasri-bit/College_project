@@ -14,11 +14,12 @@ const isNetworkError = (error) =>
 export async function apiRequest(path, options = {}, fallbackValue = undefined) {
   const url = path.startsWith("http") ? path : buildUrl(path);
   const config = {
+    ...options,
     headers: {
       Accept: "application/json",
+      "x-user-id": "1",
       ...(options.headers || {}),
     },
-    ...options,
   };
 
   if (config.body && typeof config.body !== "string" && !(config.body instanceof FormData)) {

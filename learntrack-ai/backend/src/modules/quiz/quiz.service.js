@@ -1,11 +1,10 @@
 import prisma from "../../lib/prisma.js";
 import * as learningSpaces from "../learning-spaces/learningSpaces.service.js";
+import { GoogleGenAI } from "@google/genai";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // --- Quiz creation -----------------------------------------------------
-// NOTE: This is manual/topic-based quiz creation for Phase 7. AI-generated
-// quizzes (Google Gemini, Phase 8) is a separate future addition — plug it
-// in as another function here that builds the same `questions` shape and
-// reuses `createQuiz` below, rather than duplicating the storage logic.
 
 export async function createQuiz(userId, { learningSpaceId, topic, difficulty, questions }) {
   const space = await learningSpaces.getOwned(userId, learningSpaceId);
@@ -21,11 +20,95 @@ export async function createQuiz(userId, { learningSpaceId, topic, difficulty, q
         create: questions.map((q) => ({
           questionText: q.questionText,
           correctAnswer: q.correctAnswer,
+          options: q.options ?? [],
         })),
       },
     },
     include: { questions: true },
   });
+}
+
+// --- AI (Gemini) quiz generation — Phase 8 --------------------------------
+
+async function callGeminiWithRetry(prompt) {
+  const models = ["gemini-3.8-flash", "gemini-2.5-flash"];
+  const maxAttemptsPerModel = 3;
+
+  for (const model of models) {
+    for (let attempt = 1; attempt <= maxAttemptsPerModel; attempt++) {
+      try {
+        const result = await ai.models.generateContent({ model, contents: prompt });
+        return result.text;
+      } catch (err) {
+        const isRetryable = err?.status === 503 || err?.status === 429;
+        const isLastAttempt = attempt === maxAttemptsPerModel;
+
+        if (!isRetryable || isLastAttempt) {
+          if (isRetryable) break;
+          throw err;
+        }
+
+        const delayMs = attempt * 1000 + Math.random() * 500;
+        console.log(`Gemini ${model} overloaded, retrying in ${Math.round(delayMs)}ms (attempt ${attempt}/${maxAttemptsPerModel})`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  throw new Error("Gemini is currently overloaded on all models. Please try again in a minute.");
+}
+
+async function generateQuestionsWithGemini({ topic, difficulty, notes, questionCount = 5 }) {
+  const source = notes
+    ? `Base the questions strictly on this content:\n"""${notes}"""`
+    : `Base the questions on the topic: "${topic}"`;
+
+  const prompt = `You are a quiz generator for a study app.
+${source}
+Difficulty level: ${difficulty}.
+
+Generate exactly ${questionCount} multiple-choice questions. Each question must have
+exactly 4 options, with exactly one correct answer that matches one of the options
+EXACTLY (same text, same casing).
+
+Respond with ONLY valid JSON (no markdown, no backticks, no extra text), in this exact shape:
+
+[
+  {
+    "questionText": "string",
+    "options": ["string", "string", "string", "string"],
+    "correctAnswer": "string (must exactly match one of the options)"
+  }
+]`;
+
+  const text = await callGeminiWithRetry(prompt);
+  const cleaned = text.replace(/```json|```/g, "").trim();
+
+  let questions;
+  try {
+    questions = JSON.parse(cleaned);
+  } catch (err) {
+    throw new Error("Gemini returned invalid JSON: " + text.slice(0, 200));
+  }
+  if (!Array.isArray(questions) || questions.length === 0) {
+    throw new Error("Gemini returned no questions.");
+  }
+
+  for (const q of questions) {
+    if (!Array.isArray(q.options) || q.options.length !== 4) {
+      throw new Error("Gemini returned a question without exactly 4 options.");
+    }
+    if (!q.options.includes(q.correctAnswer)) {
+      throw new Error("Gemini's correctAnswer didn't match any of its own options.");
+    }
+  }
+
+  return questions;
+}
+
+export async function createAIQuiz(userId, { learningSpaceId, topic, difficulty, notes, questionCount }) {
+  const questions = await generateQuestionsWithGemini({ topic, difficulty, notes, questionCount });
+  return createQuiz(userId, { learningSpaceId, topic, difficulty, questions });
 }
 
 export async function listForLearningSpace(userId, learningSpaceId) {
@@ -54,6 +137,7 @@ export async function getQuizForAttempt(userId, quizId) {
     questions: quiz.questions.map((q) => ({
       questionId: q.questionId,
       questionText: q.questionText,
+      options: q.options,
     })),
   };
 }
@@ -102,13 +186,17 @@ export async function submitAttempt(userId, quizId, answers) {
     totalQuestions,
     accuracy,
     attemptedAt: attempt.attemptedAt,
-    review: gradedAnswers.map((a) => ({
-      questionId: a.questionId,
-      questionText: quiz.questions.find((q) => q.questionId === a.questionId).questionText,
-      correctAnswer: quiz.questions.find((q) => q.questionId === a.questionId).correctAnswer,
-      selectedAnswer: a.selectedAnswer,
-      isCorrect: a.isCorrect,
-    })),
+    review: gradedAnswers.map((a) => {
+      const question = quiz.questions.find((q) => q.questionId === a.questionId);
+      return {
+        questionId: a.questionId,
+        questionText: question.questionText,
+        options: question.options,
+        correctAnswer: question.correctAnswer,
+        selectedAnswer: a.selectedAnswer,
+        isCorrect: a.isCorrect,
+      };
+    }),
   };
 }
 
@@ -134,6 +222,7 @@ export async function getAttemptReview(userId, quizAttemptId) {
     review: attempt.attemptAnswers.map((a) => ({
       questionId: a.questionId,
       questionText: a.question.questionText,
+      options: a.question.options,
       correctAnswer: a.question.correctAnswer,
       selectedAnswer: a.selectedAnswer,
       isCorrect:
@@ -147,7 +236,10 @@ export async function getAttemptReview(userId, quizAttemptId) {
 export async function historyForUser(userId, { limit = 20 } = {}) {
   const attempts = await prisma.quizAttempts.findMany({
     where: { userId },
-    include: { quiz: true, attemptAnswers: true },
+    include: {
+      quiz: { include: { learningSpace: true } },
+      attemptAnswers: true,
+    },
     orderBy: { attemptedAt: "desc" },
     take: limit,
   });
@@ -156,6 +248,7 @@ export async function historyForUser(userId, { limit = 20 } = {}) {
     const totalQuestions = a.attemptAnswers.length;
     return {
       quizAttemptId: a.quizAttemptId,
+      subject: a.quiz.learningSpace.name,
       topic: a.quiz.topic,
       difficulty: a.quiz.difficulty,
       score: a.score,

@@ -1,4 +1,7 @@
 import * as service from "./quiz.service.js";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
 
 export async function create(req, res, next) {
   try {
@@ -20,6 +23,58 @@ export async function create(req, res, next) {
       topic,
       difficulty,
       questions,
+    });
+    if (!quiz) return res.status(404).json({ error: "Learning space not found." });
+    res.status(201).json(quiz);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function createAI(req, res, next) {
+  try {
+    const { learningSpaceId, topic, difficulty, notes, questionCount } = req.body;
+    if (!learningSpaceId || !topic || !difficulty) {
+      return res.status(400).json({ error: "learningSpaceId, topic and difficulty are required." });
+    }
+
+    const quiz = await service.createAIQuiz(req.user.id, {
+      learningSpaceId: Number(learningSpaceId),
+      topic,
+      difficulty,
+      notes,
+      questionCount,
+    });
+    if (!quiz) return res.status(404).json({ error: "Learning space not found." });
+    res.status(201).json(quiz);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function createAIFromPdf(req, res, next) {
+  try {
+    const { learningSpaceId, topic, difficulty, questionCount } = req.body;
+    if (!learningSpaceId || !difficulty) {
+      return res.status(400).json({ error: "learningSpaceId and difficulty are required." });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: "A PDF file is required." });
+    }
+
+    const parsed = await pdfParse(req.file.buffer);
+    const extractedText = parsed.text?.trim();
+
+    if (!extractedText) {
+      return res.status(400).json({ error: "Couldn't extract any text from that PDF." });
+    }
+
+    const quiz = await service.createAIQuiz(req.user.id, {
+      learningSpaceId: Number(learningSpaceId),
+      topic: topic || req.file.originalname.replace(/\.pdf$/i, ""),
+      difficulty,
+      notes: extractedText,
+      questionCount,
     });
     if (!quiz) return res.status(404).json({ error: "Learning space not found." });
     res.status(201).json(quiz);

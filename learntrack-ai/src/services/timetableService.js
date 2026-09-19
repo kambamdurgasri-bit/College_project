@@ -1,42 +1,34 @@
-// Service layer placeholder. Keep all future API/network logic isolated
-// here so pages and components never call fetch/axios directly.
-//
-// TODO: replace mock-data import with a real API client (e.g. axios instance)
-import {
-  scheduleEvents,
-  weekDays,
-  timetableWeekLabel,
-} from "../mock-data/timetable";
+// Service layer for timetable management.
+// All API calls go through here — no fallbacks to mock data.
 import { apiRequest } from "./api";
 
 export const timetableService = {
-  // TODO: GET /api/timetable?week=:weekStart
-  async getWeek() {
-    return apiRequest(
-      "/timetable",
-      { method: "GET" },
-      {
-        weekLabel: timetableWeekLabel,
-        weekDays,
-        events: scheduleEvents,
-      },
-    );
+  // GET /api/timetable (apiRequest adds /api/ prefix)
+  async list() {
+    const data = await apiRequest("/timetable", { method: "GET" });
+    return data || [];
   },
 
-  // TODO: POST /api/timetable
-  async createEvent(payload) {
-    const created = await apiRequest(
-      "/timetable",
-      {
-        method: "POST",
-        body: payload,
-      },
-      {
-        id: `event-${Date.now()}`,
-        ...payload,
-      },
-    );
+  // POST /api/timetable
+  async create(payload) {
+    return await apiRequest("/timetable", {
+      method: "POST",
+      body: payload,
+    });
+  },
 
-    return created;
+  // PUT /api/timetable/:id
+  async update(id, payload) {
+    return await apiRequest(`/timetable/${id}`, {
+      method: "PUT",
+      body: payload,
+    });
+  },
+
+  // DELETE /api/timetable/:id
+  async delete(id) {
+    return await apiRequest(`/timetable/${id}`, {
+      method: "DELETE",
+    });
   },
 };

@@ -1,22 +1,23 @@
 import { Coffee } from "lucide-react";
 import { getTheme } from "../../utils/theme";
-import { getSubjectColorId } from "../../mock-data/timetable";
-
-const formatTime = (hour, minute) => {
-  const period = hour >= 12 ? "PM" : "AM";
-  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-  return `${displayHour}:${minute.toString().padStart(2, "0")} ${period}`;
-};
+import {
+  getColorIdBySubject,
+  formatTime12Hour,
+  timeToMinutes,
+} from "../../utils/timetableHelpers";
 
 export default function DayView({ day, events, onEventClick }) {
-  const sorted = [...events].sort(
-    (a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute)
+  if (!day) return null;
+
+  // Sort by start time
+  const sorted = [...events].sort((a, b) =>
+    timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
   );
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-surface-light p-5 shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card dark:shadow-card-dark">
       <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-200">
-        {day.label} {day.date}
+        {day}
       </h3>
 
       {sorted.length === 0 ? (
@@ -29,7 +30,8 @@ export default function DayView({ day, events, onEventClick }) {
       ) : (
         <ul className="space-y-3">
           {sorted.map((event) => {
-            const theme = getTheme(getSubjectColorId(event.subjectId));
+            const colorId = getColorIdBySubject(event.subject);
+            const theme = getTheme(colorId);
             return (
               <li key={event.id}>
                 <button
@@ -37,12 +39,17 @@ export default function DayView({ day, events, onEventClick }) {
                   onClick={() => onEventClick?.(event)}
                   className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-transform hover:-translate-y-0.5 ${theme.eventBg} ${theme.eventBorder}`}
                 >
-                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${theme.dot}`} />
+                  <span
+                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${theme.dot}`}
+                  />
                   <div>
                     <p className={`text-sm font-semibold ${theme.eventText}`}>
-                      {formatTime(event.hour, event.minute)}
+                      {formatTime12Hour(event.startTime)} –{" "}
+                      {formatTime12Hour(event.endTime)}
                     </p>
-                    <p className={`text-xs ${theme.eventText}`}>{event.label}</p>
+                    <p className={`text-xs ${theme.eventText}`}>
+                      {event.subject}
+                    </p>
                   </div>
                 </button>
               </li>

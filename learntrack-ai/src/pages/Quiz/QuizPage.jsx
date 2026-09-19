@@ -10,14 +10,11 @@ import {
   ChevronDown,
   ChevronUp,
   Radio,
+  Loader2,
 } from "lucide-react";
-import {
-  SUBJECTS,
-  DIFFICULTIES,
-  QUESTION_COUNTS,
-  SAMPLE_QUESTIONS,
-  QUIZ_HISTORY,
-} from "../../quizData";
+import { DIFFICULTIES, QUESTION_COUNTS } from "../../quizData";
+import { learningSpaceService } from "../../services/learningSpaceService";
+import { quizService } from "../../services/quizService";
 
 // ============================================================================
 // COLORS & STYLING
@@ -97,11 +94,35 @@ function DifficultyBadge({ level }) {
   );
 }
 
+function formatDate(isoString) {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  return d.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
+}
+
 // ============================================================================
 // QUIZ HOME SCREEN
 // ============================================================================
 
 function QuizHome({ goTo }) {
+  const [recentAttempts, setRecentAttempts] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    quizService
+      .history(3)
+      .then((data) => {
+        if (!cancelled) setRecentAttempts(Array.isArray(data) ? data : []);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingHistory(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -149,7 +170,7 @@ function QuizHome({ goTo }) {
             className="mb-5 text-sm leading-6"
             style={{ color: COLORS.sub }}
           >
-            Choose a subject and topic, then customize the difficulty
+            Choose a learning space and topic, then customize the difficulty
             before starting your quiz.
           </p>
 
@@ -224,56 +245,66 @@ function QuizHome({ goTo }) {
           </button>
         </div>
 
-        <div
-          className="overflow-hidden rounded-xl border"
-          style={{ borderColor: COLORS.line }}
-        >
-          {QUIZ_HISTORY.slice(0, 3).map((q, index) => (
-            <div
-              key={q.id}
-              className={`flex flex-wrap items-center justify-between gap-3 px-4 py-4 ${
-                index !== 0 ? "border-t" : ""
-              }`}
-              style={{
-                borderColor: COLORS.line,
-              }}
-            >
-              <div className="min-w-0">
-                <p
-                  className="truncate text-sm font-semibold"
-                  style={{ color: COLORS.ink }}
-                >
-                  {q.subject} — {q.topic}
-                </p>
+        {loadingHistory ? (
+          <p className="py-8 text-center text-sm" style={{ color: COLORS.sub }}>
+            Loading...
+          </p>
+        ) : recentAttempts.length === 0 ? (
+          <p className="py-8 text-center text-sm" style={{ color: COLORS.sub }}>
+            No quiz attempts yet. Create your first quiz above!
+          </p>
+        ) : (
+          <div
+            className="overflow-hidden rounded-xl border"
+            style={{ borderColor: COLORS.line }}
+          >
+            {recentAttempts.map((q, index) => (
+              <div
+                key={q.quizAttemptId}
+                className={`flex flex-wrap items-center justify-between gap-3 px-4 py-4 ${
+                  index !== 0 ? "border-t" : ""
+                }`}
+                style={{
+                  borderColor: COLORS.line,
+                }}
+              >
+                <div className="min-w-0">
+                  <p
+                    className="truncate text-sm font-semibold"
+                    style={{ color: COLORS.ink }}
+                  >
+                    {q.subject} — {q.topic}
+                  </p>
 
-                <p
-                  className="mt-1 text-[11px]"
-                  style={{ color: COLORS.sub }}
-                >
-                  {q.date} · {q.total} questions
-                </p>
+                  <p
+                    className="mt-1 text-[11px]"
+                    style={{ color: COLORS.sub }}
+                  >
+                    {formatDate(q.attemptedAt)} · {q.totalQuestions} questions
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <DifficultyBadge level={q.difficulty} />
+
+                  <span
+                    className="text-sm font-bold"
+                    style={{
+                      color:
+                        q.accuracy >= 70
+                          ? COLORS.green
+                          : q.accuracy >= 50
+                          ? COLORS.orange
+                          : COLORS.red,
+                    }}
+                  >
+                    {q.accuracy}%
+                  </span>
+                </div>
               </div>
-
-              <div className="flex items-center gap-3">
-                <DifficultyBadge level={q.difficulty} />
-
-                <span
-                  className="text-sm font-bold"
-                  style={{
-                    color:
-                      q.accuracy >= 70
-                        ? COLORS.green
-                        : q.accuracy >= 50
-                        ? COLORS.orange
-                        : COLORS.red,
-                  }}
-                >
-                  {q.accuracy}%
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
   );
@@ -284,49 +315,82 @@ function QuizHome({ goTo }) {
 // ============================================================================
 
 function GenerateQuiz({ goTo, source, onGenerate }) {
-  const [selectedSubject, setSelectedSubject] = useState("");
-  const [selectedTopic, setSelectedTopic] = useState("");
+  const [learningSpaces, setLearningSpaces] = useState([]);
+  const [loadingSpaces, setLoadingSpaces] = useState(true);
+  const [selectedSpace, setSelectedSpace] = useState(null);
+  const [topicText, setTopicText] = useState("");
   const [selectedDifficulty, setSelectedDifficulty] = useState("");
   const [selectedCount, setSelectedCount] = useState("");
-  const [fileName, setFileName] = useState("");
+  const [file, setFile] = useState(null);
   const [showSubjectMenu, setShowSubjectMenu] = useState(false);
-  const [showTopicMenu, setShowTopicMenu] = useState(false);
   const [showDifficultyMenu, setShowDifficultyMenu] = useState(false);
   const [showCountMenu, setShowCountMenu] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const topics = selectedSubject ? SUBJECTS[selectedSubject] : [];
+  useEffect(() => {
+    let cancelled = false;
+    learningSpaceService.list().then((data) => {
+      if (!cancelled) {
+        setLearningSpaces(Array.isArray(data) ? data : []);
+        setLoadingSpaces(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  // Validation logic based on source
   const isComplete =
     source === "topic"
-      ? selectedSubject && selectedTopic && selectedDifficulty && selectedCount
-      : !!fileName && selectedDifficulty && selectedCount;
+      ? selectedSpace && topicText.trim() && selectedDifficulty && selectedCount
+      : selectedSpace && !!file && selectedDifficulty && selectedCount;
 
-  const handleGenerate = () => {
-    if (isComplete) {
+  const handleGenerate = async () => {
+    if (!isComplete || submitting) return;
+    setError("");
+    setSubmitting(true);
+
+    try {
+      let createdQuiz;
       if (source === "topic") {
-        onGenerate({
-          subject: selectedSubject,
-          topic: selectedTopic,
+        createdQuiz = await quizService.generate({
+          learningSpaceId: selectedSpace.id,
+          topic: topicText.trim(),
           difficulty: selectedDifficulty,
-          count: parseInt(selectedCount),
+          questionCount: parseInt(selectedCount),
         });
       } else {
-        onGenerate({
-          subject: "Study Material",
-          topic: fileName,
+        createdQuiz = await quizService.generateFromPdf({
+          learningSpaceId: selectedSpace.id,
           difficulty: selectedDifficulty,
-          count: parseInt(selectedCount),
+          questionCount: parseInt(selectedCount),
+          file,
         });
       }
+
+      // The creation response includes correct answers — fetch the
+      // sanitized attempt version before letting the user take it.
+      const attemptQuiz = await quizService.getForAttempt(createdQuiz.id);
+
+      onGenerate({
+        id: createdQuiz.id,
+        subject: selectedSpace.name,
+        topic: createdQuiz.topic,
+        difficulty: createdQuiz.difficulty,
+        count: attemptQuiz.questions.length,
+        questions: attemptQuiz.questions,
+      });
+    } catch (err) {
+      setError(err.message || "Something went wrong generating your quiz. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFileName(file.name);
-    }
+    const selected = e.target.files?.[0];
+    if (selected) setFile(selected);
   };
 
   return (
@@ -366,113 +430,84 @@ function GenerateQuiz({ goTo, source, onGenerate }) {
       {/* Form */}
       <Card>
         <div className="space-y-4">
-          {source === "topic" ? (
-            <>
-              {/* Subject Dropdown */}
-              <div>
-                <label
-                  className="mb-2 block text-xs font-semibold"
-                  style={{ color: COLORS.ink }}
-                >
-                  Subject
-                </label>
-                <button
-                  onClick={() => setShowSubjectMenu(!showSubjectMenu)}
-                  className="w-full rounded-xl border px-4 py-3 text-left text-sm"
-                  style={{
-                    borderColor: COLORS.line,
-                    color: selectedSubject ? COLORS.ink : COLORS.sub,
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{selectedSubject || "Select a subject"}</span>
-                    <ChevronDown
-                      size={16}
-                      className={`transition-transform ${showSubjectMenu ? "rotate-180" : ""}`}
-                    />
-                  </div>
-                </button>
-                {showSubjectMenu && (
-                  <div
-                    className="absolute z-50 mt-2 w-[calc(100%-3rem)] max-w-sm rounded-xl border shadow-lg"
-                    style={{ borderColor: COLORS.line, backgroundColor: COLORS.white }}
-                  >
-                    {Object.keys(SUBJECTS).map((subj) => (
-                      <button
-                        key={subj}
-                        onClick={() => {
-                          setSelectedSubject(subj);
-                          setSelectedTopic("");
-                          setShowSubjectMenu(false);
-                        }}
-                        className="w-full border-b px-4 py-3 text-left text-sm hover:bg-slate-50 last:border-b-0"
-                        style={{
-                          borderColor: COLORS.line,
-                          color:
-                            selectedSubject === subj ? COLORS.purple : COLORS.ink,
-                          fontWeight: selectedSubject === subj ? "600" : "400",
-                        }}
-                      >
-                        {subj}
-                      </button>
-                    ))}
-                  </div>
+          {/* Learning Space Dropdown */}
+          <div className="relative">
+            <label
+              className="mb-2 block text-xs font-semibold"
+              style={{ color: COLORS.ink }}
+            >
+              Learning Space
+            </label>
+            <button
+              onClick={() => setShowSubjectMenu(!showSubjectMenu)}
+              disabled={loadingSpaces}
+              className="w-full rounded-xl border px-4 py-3 text-left text-sm"
+              style={{
+                borderColor: COLORS.line,
+                color: selectedSpace ? COLORS.ink : COLORS.sub,
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <span>
+                  {loadingSpaces
+                    ? "Loading learning spaces..."
+                    : selectedSpace?.name || "Select a learning space"}
+                </span>
+                <ChevronDown
+                  size={16}
+                  className={`transition-transform ${showSubjectMenu ? "rotate-180" : ""}`}
+                />
+              </div>
+            </button>
+            {showSubjectMenu && !loadingSpaces && (
+              <div
+                className="absolute z-50 mt-2 w-[calc(100%-3rem)] max-w-sm rounded-xl border shadow-lg"
+                style={{ borderColor: COLORS.line, backgroundColor: COLORS.white }}
+              >
+                {learningSpaces.length === 0 ? (
+                  <p className="px-4 py-3 text-sm" style={{ color: COLORS.sub }}>
+                    No learning spaces yet. Create one first.
+                  </p>
+                ) : (
+                  learningSpaces.map((space) => (
+                    <button
+                      key={space.id}
+                      onClick={() => {
+                        setSelectedSpace(space);
+                        setShowSubjectMenu(false);
+                      }}
+                      className="w-full border-b px-4 py-3 text-left text-sm hover:bg-slate-50 last:border-b-0"
+                      style={{
+                        borderColor: COLORS.line,
+                        color: selectedSpace?.id === space.id ? COLORS.purple : COLORS.ink,
+                        fontWeight: selectedSpace?.id === space.id ? "600" : "400",
+                      }}
+                    >
+                      {space.name}
+                    </button>
+                  ))
                 )}
               </div>
+            )}
+          </div>
 
-              {/* Topic Dropdown */}
-              {selectedSubject && (
-                <div>
-                  <label
-                    className="mb-2 block text-xs font-semibold"
-                    style={{ color: COLORS.ink }}
-                  >
-                    Topic
-                  </label>
-                  <button
-                    onClick={() => setShowTopicMenu(!showTopicMenu)}
-                    className="w-full rounded-xl border px-4 py-3 text-left text-sm"
-                    style={{
-                      borderColor: COLORS.line,
-                      color: selectedTopic ? COLORS.ink : COLORS.sub,
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>{selectedTopic || "Select a topic"}</span>
-                      <ChevronDown
-                        size={16}
-                        className={`transition-transform ${showTopicMenu ? "rotate-180" : ""}`}
-                      />
-                    </div>
-                  </button>
-                  {showTopicMenu && (
-                    <div
-                      className="absolute z-50 mt-2 w-[calc(100%-3rem)] max-w-sm rounded-xl border shadow-lg"
-                      style={{ borderColor: COLORS.line, backgroundColor: COLORS.white }}
-                    >
-                      {topics.map((topic) => (
-                        <button
-                          key={topic}
-                          onClick={() => {
-                            setSelectedTopic(topic);
-                            setShowTopicMenu(false);
-                          }}
-                          className="w-full border-b px-4 py-3 text-left text-sm hover:bg-slate-50 last:border-b-0"
-                          style={{
-                            borderColor: COLORS.line,
-                            color:
-                              selectedTopic === topic ? COLORS.purple : COLORS.ink,
-                            fontWeight: selectedTopic === topic ? "600" : "400",
-                          }}
-                        >
-                          {topic}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
+          {source === "topic" ? (
+            <div>
+              <label
+                className="mb-2 block text-xs font-semibold"
+                style={{ color: COLORS.ink }}
+              >
+                Topic
+              </label>
+              <input
+                type="text"
+                value={topicText}
+                onChange={(e) => setTopicText(e.target.value)}
+                placeholder="e.g. Neural Networks, SQL Joins, Deadlocks..."
+                className="w-full rounded-xl border px-4 py-3 text-sm"
+                style={{ borderColor: COLORS.line, color: COLORS.ink }}
+              />
+            </div>
           ) : (
             <div>
               <label
@@ -488,19 +523,19 @@ function GenerateQuiz({ goTo, source, onGenerate }) {
                 className="w-full rounded-xl border px-4 py-3 text-sm"
                 style={{ borderColor: COLORS.line }}
               />
-              {fileName && (
+              {file && (
                 <p
                   className="mt-2 text-xs"
                   style={{ color: COLORS.green }}
                 >
-                  ✓ {fileName}
+                  ✓ {file.name}
                 </p>
               )}
             </div>
           )}
 
           {/* Difficulty Dropdown */}
-          <div>
+          <div className="relative">
             <label
               className="mb-2 block text-xs font-semibold"
               style={{ color: COLORS.ink }}
@@ -550,7 +585,7 @@ function GenerateQuiz({ goTo, source, onGenerate }) {
           </div>
 
           {/* Question Count Dropdown */}
-          <div>
+          <div className="relative">
             <label
               className="mb-2 block text-xs font-semibold"
               style={{ color: COLORS.ink }}
@@ -594,8 +629,7 @@ function GenerateQuiz({ goTo, source, onGenerate }) {
                     className="w-full border-b px-4 py-3 text-left text-sm hover:bg-slate-50 last:border-b-0"
                     style={{
                       borderColor: COLORS.line,
-                      color:
-                        selectedCount === String(count) ? COLORS.purple : COLORS.ink,
+                      color: selectedCount === String(count) ? COLORS.purple : COLORS.ink,
                       fontWeight: selectedCount === String(count) ? "600" : "400",
                     }}
                   >
@@ -608,14 +642,33 @@ function GenerateQuiz({ goTo, source, onGenerate }) {
         </div>
       </Card>
 
+      {error && (
+        <div
+          className="flex items-center gap-2 rounded-xl border p-4 text-sm"
+          style={{ borderColor: "#FEE2E2", backgroundColor: COLORS.redSoft, color: COLORS.red }}
+        >
+          <AlertCircle size={16} />
+          {error}
+        </div>
+      )}
+
       {/* Actions */}
       <PrimaryButton
         onClick={handleGenerate}
-        disabled={!isComplete}
+        disabled={!isComplete || submitting}
         className="w-full"
       >
-        Generate Quiz
-        <ArrowRight size={16} />
+        {submitting ? (
+          <>
+            <Loader2 size={16} className="animate-spin" />
+            Generating Quiz...
+          </>
+        ) : (
+          <>
+            Generate Quiz
+            <ArrowRight size={16} />
+          </>
+        )}
       </PrimaryButton>
     </div>
   );
@@ -748,14 +801,17 @@ function QuizAttempt({ goTo, quizConfig, onSubmit }) {
   const [answers, setAnswers] = useState({});
   const [markedForReview, setMarkedForReview] = useState(new Set());
   const [timeLeft, setTimeLeft] = useState(quizConfig.count * 60);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const currentQuestion = SAMPLE_QUESTIONS[currentIndex];
+  const questions = quizConfig.questions;
+  const currentQuestion = questions[currentIndex];
 
-  // Timer
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
+          clearInterval(timer);
           handleSubmit();
           return 0;
         }
@@ -763,36 +819,41 @@ function QuizAttempt({ goTo, quizConfig, onSubmit }) {
       });
     }, 1000);
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleAnswer = (optionIndex) => {
+  const handleAnswer = (optionText) => {
     setAnswers({
       ...answers,
-      [currentQuestion.id]: optionIndex,
+      [currentQuestion.questionId]: optionText,
     });
   };
 
   const handleMarkForReview = () => {
     const newSet = new Set(markedForReview);
-    if (newSet.has(currentQuestion.id)) {
-      newSet.delete(currentQuestion.id);
+    if (newSet.has(currentQuestion.questionId)) {
+      newSet.delete(currentQuestion.questionId);
     } else {
-      newSet.add(currentQuestion.id);
+      newSet.add(currentQuestion.questionId);
     }
     setMarkedForReview(newSet);
   };
 
-  const handleSubmit = () => {
-    const correct = Object.keys(answers).filter(
-      (qId) => answers[qId] === SAMPLE_QUESTIONS.find((q) => q.id === parseInt(qId)).correct
-    ).length;
-
-    onSubmit({
-      correct,
-      total: SAMPLE_QUESTIONS.length,
-      answers,
-      markedForReview,
-    });
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const answerPayload = Object.entries(answers).map(([questionId, selectedAnswer]) => ({
+        questionId: Number(questionId),
+        selectedAnswer,
+      }));
+      const result = await quizService.submitAttempt(quizConfig.id, answerPayload);
+      onSubmit(result);
+    } catch (err) {
+      setError(err.message || "Couldn't submit your quiz. Please try again.");
+      setSubmitting(false);
+    }
   };
 
   const formatTime = (seconds) => {
@@ -818,7 +879,7 @@ function QuizAttempt({ goTo, quizConfig, onSubmit }) {
             className="mt-1 text-sm"
             style={{ color: COLORS.sub }}
           >
-            Question {currentIndex + 1} of {SAMPLE_QUESTIONS.length}
+            Question {currentIndex + 1} of {questions.length}
           </p>
         </div>
         <div
@@ -835,6 +896,16 @@ function QuizAttempt({ goTo, quizConfig, onSubmit }) {
         </div>
       </div>
 
+      {error && (
+        <div
+          className="flex items-center gap-2 rounded-xl border p-4 text-sm"
+          style={{ borderColor: "#FEE2E2", backgroundColor: COLORS.redSoft, color: COLORS.red }}
+        >
+          <AlertCircle size={16} />
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Question */}
         <div className="lg:col-span-2">
@@ -843,40 +914,38 @@ function QuizAttempt({ goTo, quizConfig, onSubmit }) {
               className="mb-6 text-lg font-bold"
               style={{ color: COLORS.ink }}
             >
-              {currentQuestion.text}
+              {currentQuestion.questionText}
             </h2>
 
             <div className="space-y-3">
-              {currentQuestion.options.map((option, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleAnswer(idx)}
-                  className="flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-all"
-                  style={{
-                    borderColor:
-                      answers[currentQuestion.id] === idx
-                        ? COLORS.purple
-                        : COLORS.line,
-                    backgroundColor:
-                      answers[currentQuestion.id] === idx ? COLORS.purpleSoft : "white",
-                  }}
-                >
-                  <Radio
-                    size={20}
-                    color={answers[currentQuestion.id] === idx ? COLORS.purple : COLORS.line}
-                    fill={answers[currentQuestion.id] === idx ? COLORS.purple : "none"}
-                  />
-                  <span
+              {currentQuestion.options.map((option, idx) => {
+                const isSelected = answers[currentQuestion.questionId] === option;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => handleAnswer(option)}
+                    className="flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-all"
                     style={{
-                      color:
-                        answers[currentQuestion.id] === idx ? COLORS.purple : COLORS.ink,
-                      fontWeight: answers[currentQuestion.id] === idx ? "600" : "400",
+                      borderColor: isSelected ? COLORS.purple : COLORS.line,
+                      backgroundColor: isSelected ? COLORS.purpleSoft : "white",
                     }}
                   >
-                    {option}
-                  </span>
-                </button>
-              ))}
+                    <Radio
+                      size={20}
+                      color={isSelected ? COLORS.purple : COLORS.line}
+                      fill={isSelected ? COLORS.purple : "none"}
+                    />
+                    <span
+                      style={{
+                        color: isSelected ? COLORS.purple : COLORS.ink,
+                        fontWeight: isSelected ? "600" : "400",
+                      }}
+                    >
+                      {option}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Mark for Review Button */}
@@ -884,10 +953,10 @@ function QuizAttempt({ goTo, quizConfig, onSubmit }) {
               onClick={handleMarkForReview}
               className="mt-6 flex items-center gap-2 text-sm font-semibold"
               style={{
-                color: markedForReview.has(currentQuestion.id) ? COLORS.orange : COLORS.sub,
+                color: markedForReview.has(currentQuestion.questionId) ? COLORS.orange : COLORS.sub,
               }}
             >
-              {markedForReview.has(currentQuestion.id) ? "★" : "☆"} Mark for review
+              {markedForReview.has(currentQuestion.questionId) ? "★" : "☆"} Mark for review
             </button>
           </Card>
 
@@ -903,9 +972,9 @@ function QuizAttempt({ goTo, quizConfig, onSubmit }) {
             </SecondaryButton>
             <SecondaryButton
               onClick={() =>
-                setCurrentIndex(Math.min(SAMPLE_QUESTIONS.length - 1, currentIndex + 1))
+                setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1))
               }
-              disabled={currentIndex === SAMPLE_QUESTIONS.length - 1}
+              disabled={currentIndex === questions.length - 1}
               className="flex-1"
             >
               Next
@@ -919,9 +988,18 @@ function QuizAttempt({ goTo, quizConfig, onSubmit }) {
               <ArrowLeft size={16} />
               Quit Quiz
             </SecondaryButton>
-            <PrimaryButton onClick={handleSubmit} className="flex-1">
-              Submit Quiz
-              <ArrowRight size={16} />
+            <PrimaryButton onClick={handleSubmit} disabled={submitting} className="flex-1">
+              {submitting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  Submit Quiz
+                  <ArrowRight size={16} />
+                </>
+              )}
             </PrimaryButton>
           </div>
         </div>
@@ -939,12 +1017,12 @@ function QuizAttempt({ goTo, quizConfig, onSubmit }) {
               className="mb-3 text-xs"
               style={{ color: COLORS.sub }}
             >
-              {answeredCount} of {SAMPLE_QUESTIONS.length} answered
+              {answeredCount} of {questions.length} answered
             </p>
             <div className="grid grid-cols-5 gap-2">
-              {SAMPLE_QUESTIONS.map((q, idx) => (
+              {questions.map((q, idx) => (
                 <button
-                  key={q.id}
+                  key={q.questionId}
                   onClick={() => setCurrentIndex(idx)}
                   className={`flex h-10 w-10 items-center justify-center rounded-lg text-xs font-bold transition-all ${
                     idx === currentIndex ? "ring-2" : ""
@@ -953,11 +1031,11 @@ function QuizAttempt({ goTo, quizConfig, onSubmit }) {
                     backgroundColor:
                       idx === currentIndex
                         ? COLORS.purple
-                        : answers[q.id] !== undefined
+                        : answers[q.questionId] !== undefined
                         ? COLORS.greenSoft
                         : COLORS.line,
                     color:
-                      idx === currentIndex || answers[q.id] !== undefined
+                      idx === currentIndex || answers[q.questionId] !== undefined
                         ? COLORS.ink
                         : COLORS.sub,
                     ringColor: COLORS.purple,
@@ -979,7 +1057,7 @@ function QuizAttempt({ goTo, quizConfig, onSubmit }) {
 // ============================================================================
 
 function QuizResult({ goTo, quizConfig, result, onReview }) {
-  const accuracy = Math.round((result.correct / result.total) * 100);
+  const accuracy = result.accuracy;
   const performanceColor =
     accuracy >= 70 ? COLORS.green : accuracy >= 50 ? COLORS.orange : COLORS.red;
 
@@ -1036,7 +1114,7 @@ function QuizResult({ goTo, quizConfig, result, onReview }) {
                 : "Keep Practicing!"}
             </h2>
             <p className="mt-1 text-sm" style={{ color: COLORS.sub }}>
-              You scored {result.correct} out of {result.total} correct
+              You scored {result.score} out of {result.totalQuestions} correct
             </p>
           </div>
         </div>
@@ -1055,7 +1133,7 @@ function QuizResult({ goTo, quizConfig, result, onReview }) {
             className="mt-3 text-3xl font-bold"
             style={{ color: COLORS.green }}
           >
-            {result.correct}
+            {result.score}
           </p>
         </Card>
 
@@ -1070,7 +1148,7 @@ function QuizResult({ goTo, quizConfig, result, onReview }) {
             className="mt-3 text-3xl font-bold"
             style={{ color: COLORS.red }}
           >
-            {result.total - result.correct}
+            {result.totalQuestions - result.score}
           </p>
         </Card>
 
@@ -1137,21 +1215,19 @@ function QuizReview({ goTo, quizConfig, result }) {
 
       {/* Questions */}
       <div className="space-y-3">
-        {SAMPLE_QUESTIONS.map((question, idx) => {
-          const userAnswerIdx = result.answers[question.id];
-          const isCorrect = userAnswerIdx === question.correct;
-          const isExpanded = expandedQuestion === question.id;
+        {result.review.map((item, idx) => {
+          const isExpanded = expandedQuestion === item.questionId;
 
           return (
             <Card
-              key={question.id}
+              key={item.questionId}
               className={`transition-all ${
-                isCorrect ? "border-green-200" : "border-red-200"
+                item.isCorrect ? "border-green-200" : "border-red-200"
               }`}
             >
               <button
                 onClick={() =>
-                  setExpandedQuestion(isExpanded ? null : question.id)
+                  setExpandedQuestion(isExpanded ? null : item.questionId)
                 }
                 className="w-full text-left"
               >
@@ -1168,20 +1244,20 @@ function QuizReview({ goTo, quizConfig, result }) {
                         className="text-sm font-semibold"
                         style={{ color: COLORS.ink }}
                       >
-                        {question.text}
+                        {item.questionText}
                       </span>
                     </div>
                     <div className="mt-2 flex items-center gap-2">
-                      {isCorrect ? (
+                      {item.isCorrect ? (
                         <CheckCircle size={16} color={COLORS.green} />
                       ) : (
                         <AlertCircle size={16} color={COLORS.red} />
                       )}
                       <span
                         className="text-xs font-semibold"
-                        style={{ color: isCorrect ? COLORS.green : COLORS.red }}
+                        style={{ color: item.isCorrect ? COLORS.green : COLORS.red }}
                       >
-                        {isCorrect ? "Correct" : "Incorrect"}
+                        {item.isCorrect ? "Correct" : "Incorrect"}
                       </span>
                     </div>
                   </div>
@@ -1198,21 +1274,20 @@ function QuizReview({ goTo, quizConfig, result }) {
               {isExpanded && (
                 <div className="mt-4 border-t pt-4" style={{ borderColor: COLORS.line }}>
                   <div className="space-y-2">
-                    {question.options.map((option, optIdx) => {
-                      const isUserSelected = userAnswerIdx === optIdx;
-                      const isCorrectAnswer = optIdx === question.correct;
+                    {item.options.map((option, optIdx) => {
+                      const isUserSelected = item.selectedAnswer === option;
+                      const isCorrectAnswer = option === item.correctAnswer;
 
                       return (
                         <div
                           key={optIdx}
                           className="flex items-start gap-3 rounded-lg p-3"
                           style={{
-                            backgroundColor:
-                              isCorrectAnswer
-                                ? COLORS.greenSoft
-                                : isUserSelected && !isCorrectAnswer
-                                ? COLORS.redSoft
-                                : "transparent",
+                            backgroundColor: isCorrectAnswer
+                              ? COLORS.greenSoft
+                              : isUserSelected && !isCorrectAnswer
+                              ? COLORS.redSoft
+                              : "transparent",
                           }}
                         >
                           <span
@@ -1256,26 +1331,6 @@ function QuizReview({ goTo, quizConfig, result }) {
                       );
                     })}
                   </div>
-
-                  {question.explanation && (
-                    <div
-                      className="mt-4 rounded-lg p-3"
-                      style={{ backgroundColor: COLORS.purpleSoft }}
-                    >
-                      <p
-                        className="text-xs font-semibold uppercase tracking-wide"
-                        style={{ color: COLORS.purple }}
-                      >
-                        Explanation
-                      </p>
-                      <p
-                        className="mt-2 text-sm"
-                        style={{ color: COLORS.ink }}
-                      >
-                        {question.explanation}
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
             </Card>
@@ -1299,12 +1354,28 @@ function QuizReview({ goTo, quizConfig, result }) {
 // ============================================================================
 
 function QuizHistoryPage({ goTo }) {
-  // Calculate summary stats
-  const totalAttempts = QUIZ_HISTORY.length;
-  const avgAccuracy = Math.round(
-    QUIZ_HISTORY.reduce((sum, q) => sum + q.accuracy, 0) / QUIZ_HISTORY.length
-  );
-  const bestAccuracy = Math.max(...QUIZ_HISTORY.map((q) => q.accuracy));
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    quizService.history().then((data) => {
+      if (!cancelled) {
+        setHistory(Array.isArray(data) ? data : []);
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const totalAttempts = history.length;
+  const avgAccuracy =
+    totalAttempts > 0
+      ? Math.round(history.reduce((sum, q) => sum + q.accuracy, 0) / totalAttempts)
+      : 0;
+  const bestAccuracy = totalAttempts > 0 ? Math.max(...history.map((q) => q.accuracy)) : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -1332,161 +1403,177 @@ function QuizHistoryPage({ goTo }) {
         </p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {loading ? (
         <Card>
-          <p
-            className="text-xs font-semibold uppercase tracking-wide"
-            style={{ color: COLORS.sub }}
-          >
-            Total Attempts
-          </p>
-          <p
-            className="mt-3 text-3xl font-bold"
-            style={{ color: COLORS.purple }}
-          >
-            {totalAttempts}
+          <p className="py-8 text-center text-sm" style={{ color: COLORS.sub }}>
+            Loading...
           </p>
         </Card>
-
+      ) : history.length === 0 ? (
         <Card>
-          <p
-            className="text-xs font-semibold uppercase tracking-wide"
-            style={{ color: COLORS.sub }}
-          >
-            Average Accuracy
-          </p>
-          <p
-            className="mt-3 text-3xl font-bold"
-            style={{ color: "#3B82F6" }}
-          >
-            {avgAccuracy}%
+          <p className="py-8 text-center text-sm" style={{ color: COLORS.sub }}>
+            No quiz attempts yet.
           </p>
         </Card>
+      ) : (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Card>
+              <p
+                className="text-xs font-semibold uppercase tracking-wide"
+                style={{ color: COLORS.sub }}
+              >
+                Total Attempts
+              </p>
+              <p
+                className="mt-3 text-3xl font-bold"
+                style={{ color: COLORS.purple }}
+              >
+                {totalAttempts}
+              </p>
+            </Card>
 
-        <Card>
-          <p
-            className="text-xs font-semibold uppercase tracking-wide"
-            style={{ color: COLORS.sub }}
-          >
-            Best Accuracy
-          </p>
-          <p
-            className="mt-3 text-3xl font-bold"
-            style={{ color: COLORS.green }}
-          >
-            {bestAccuracy}%
-          </p>
-        </Card>
-      </div>
+            <Card>
+              <p
+                className="text-xs font-semibold uppercase tracking-wide"
+                style={{ color: COLORS.sub }}
+              >
+                Average Accuracy
+              </p>
+              <p
+                className="mt-3 text-3xl font-bold"
+                style={{ color: "#3B82F6" }}
+              >
+                {avgAccuracy}%
+              </p>
+            </Card>
 
-      {/* History Table */}
-      <Card>
-        <h3
-          className="mb-4 text-base font-bold"
-          style={{ color: COLORS.ink }}
-        >
-          Previous Attempts
-        </h3>
+            <Card>
+              <p
+                className="text-xs font-semibold uppercase tracking-wide"
+                style={{ color: COLORS.sub }}
+              >
+                Best Accuracy
+              </p>
+              <p
+                className="mt-3 text-3xl font-bold"
+                style={{ color: COLORS.green }}
+              >
+                {bestAccuracy}%
+              </p>
+            </Card>
+          </div>
 
-        <p
-          className="mb-4 text-xs"
-          style={{ color: COLORS.sub }}
-        >
-          Track your scores across different subjects and topics.
-        </p>
+          {/* History Table */}
+          <Card>
+            <h3
+              className="mb-4 text-base font-bold"
+              style={{ color: COLORS.ink }}
+            >
+              Previous Attempts
+            </h3>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr style={{ borderBottomColor: COLORS.line }} className="border-b">
-                <th
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: COLORS.sub }}
-                >
-                  Quiz
-                </th>
-                <th
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: COLORS.sub }}
-                >
-                  Date
-                </th>
-                <th
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: COLORS.sub }}
-                >
-                  Difficulty
-                </th>
-                <th
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: COLORS.sub }}
-                >
-                  Score
-                </th>
-                <th
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: COLORS.sub }}
-                >
-                  Accuracy
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {QUIZ_HISTORY.map((q) => (
-                <tr
-                  key={q.id}
-                  style={{ borderBottomColor: COLORS.line }}
-                  className="border-b hover:bg-slate-50"
-                >
-                  <td className="px-4 py-3">
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ color: COLORS.ink }}
+            <p
+              className="mb-4 text-xs"
+              style={{ color: COLORS.sub }}
+            >
+              Track your scores across different subjects and topics.
+            </p>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr style={{ borderBottomColor: COLORS.line }} className="border-b">
+                    <th
+                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+                      style={{ color: COLORS.sub }}
                     >
-                      {q.subject}
-                    </p>
-                    <p className="text-xs" style={{ color: COLORS.sub }}>
-                      {q.topic}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="text-sm" style={{ color: COLORS.ink }}>
-                      {q.date}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <DifficultyBadge level={q.difficulty} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ color: COLORS.ink }}
+                      Quiz
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+                      style={{ color: COLORS.sub }}
                     >
-                      {q.score}/{q.total}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p
-                      className="text-sm font-bold"
-                      style={{
-                        color:
-                          q.accuracy >= 70
-                            ? COLORS.green
-                            : q.accuracy >= 50
-                            ? COLORS.orange
-                            : COLORS.red,
-                      }}
+                      Date
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+                      style={{ color: COLORS.sub }}
                     >
-                      {q.accuracy}%
-                    </p>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                      Difficulty
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+                      style={{ color: COLORS.sub }}
+                    >
+                      Score
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+                      style={{ color: COLORS.sub }}
+                    >
+                      Accuracy
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((q) => (
+                    <tr
+                      key={q.quizAttemptId}
+                      style={{ borderBottomColor: COLORS.line }}
+                      className="border-b hover:bg-slate-50"
+                    >
+                      <td className="px-4 py-3">
+                        <p
+                          className="text-sm font-semibold"
+                          style={{ color: COLORS.ink }}
+                        >
+                          {q.subject}
+                        </p>
+                        <p className="text-xs" style={{ color: COLORS.sub }}>
+                          {q.topic}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm" style={{ color: COLORS.ink }}>
+                          {formatDate(q.attemptedAt)}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <DifficultyBadge level={q.difficulty} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <p
+                          className="text-sm font-semibold"
+                          style={{ color: COLORS.ink }}
+                        >
+                          {q.score}/{q.totalQuestions}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p
+                          className="text-sm font-bold"
+                          style={{
+                            color:
+                              q.accuracy >= 70
+                                ? COLORS.green
+                                : q.accuracy >= 50
+                                ? COLORS.orange
+                                : COLORS.red,
+                          }}
+                        >
+                          {q.accuracy}%
+                        </p>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </>
+      )}
 
       {/* Back Button */}
       <SecondaryButton onClick={() => goTo("home")} className="w-full">
@@ -1530,7 +1617,6 @@ export default function QuizPage({ initialScreen = "home" }) {
     goTo("review");
   };
 
-  // Render different screens
   if (screen === "home") {
     return <QuizHome goTo={goTo} />;
   }

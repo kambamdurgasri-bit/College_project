@@ -49,6 +49,7 @@ model Questions {
   quizId        Int              @map("quiz_id")
   questionText  String           @map("question_text")
   correctAnswer String           @map("correct_answer")
+  options       String[]         @default([]) @map("options")
 
   quiz          Quizzes          @relation(fields: [quizId], references: [id])
   attemptAnswers AttemptAnswers[]
