@@ -1,60 +1,39 @@
-// Service layer placeholder. Keep all future API/network logic isolated
-// here so pages and components never call fetch/axios directly.
-//
-// TODO: replace mock-data import with a real API client (e.g. axios instance)
-// TODO: add auth headers / interceptors once the auth module is ready
-import {
-  learningSpaces,
-  getLearningSpaceById,
-} from "../mock-data/learningSpaces";
+// Service layer for learning spaces management.
+// All API calls go through here — no fallbacks to mock data.
 import { apiRequest } from "./api";
 
 export const learningSpaceService = {
+  // GET /api/learning-spaces
   async list() {
-    const result = await apiRequest("/learning-spaces", { method: "GET" }, learningSpaces);
-    return Array.isArray(result) ? result : learningSpaces;
+    const data = await apiRequest("/learning-spaces", { method: "GET" });
+    return data || [];
   },
 
+  // GET /api/learning-spaces/:id
   async getById(id) {
-    return apiRequest(
-      `/learning-spaces/${id}`,
-      { method: "GET" },
-      getLearningSpaceById(id) ?? null,
-    );
+    return await apiRequest(`/learning-spaces/${id}`, { method: "GET" });
   },
 
+  // POST /api/learning-spaces
   async create(payload) {
-    const created = await apiRequest("/learning-spaces", {
+    return await apiRequest("/learning-spaces", {
       method: "POST",
       body: payload,
-    }, {
-      id: `new-${Date.now()}`,
-      ...payload,
     });
-
-    return created;
   },
 
+  // PUT /api/learning-spaces/:id
   async update(id, payload) {
-    const updated = await apiRequest(
-      `/learning-spaces/${id}`,
-      {
-        method: "PUT",
-        body: payload,
-      },
-      { id, ...payload },
-    );
-
-    return updated;
+    return await apiRequest(`/learning-spaces/${id}`, {
+      method: "PUT",
+      body: payload,
+    });
   },
 
+  // DELETE /api/learning-spaces/:id
   async remove(id) {
-    const removed = await apiRequest(
-      `/learning-spaces/${id}`,
-      { method: "DELETE" },
-      { id, deleted: true },
-    );
-
-    return removed;
+    return await apiRequest(`/learning-spaces/${id}`, {
+      method: "DELETE",
+    });
   },
 };

@@ -8,27 +8,25 @@ import AddScheduleForm from "../../components/timetable/AddScheduleForm";
 import { timetableService } from "../../services/timetableService";
 import { getTheme } from "../../utils/theme";
 import { timetableLegend } from "../../mock-data/timetable";
+import { WEEKDAYS } from "../../utils/timetableHelpers";
 
 export default function TimetablePage() {
   const [status, setStatus] = useState("loading");
-  const [weekLabel, setWeekLabel] = useState("");
-  const [weekDays, setWeekDays] = useState([]);
   const [events, setEvents] = useState([]);
   const [view, setView] = useState("Day"); // Week | Day
   const [activeDayIndex, setActiveDayIndex] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Load timetable on mount
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
     timetableService
-      .getWeek()
+      .list()
       .then((data) => {
         if (cancelled) return;
-        setWeekLabel(data.weekLabel??"");
-        setWeekDays(data.weekDays??[]);
-        setEvents(data.events??[]);
+        setEvents(data || []);
         setStatus("success");
       })
       .catch(() => {
@@ -39,11 +37,12 @@ export default function TimetablePage() {
     };
   }, []);
 
+  // Group events by day name for display
   const eventsByDay = useMemo(() => {
     const map = {};
     events.forEach((e) => {
-      map[e.dayIndex] = map[e.dayIndex] || [];
-      map[e.dayIndex].push(e);
+      map[e.day] = map[e.day] || [];
+      map[e.day].push(e);
     });
     return map;
   }, [events]);
@@ -51,11 +50,12 @@ export default function TimetablePage() {
   const handleAddSchedule = async (values) => {
     setSubmitting(true);
     try {
-      // TODO: once the backend is ready, timetableService.createEvent will
-      // POST to /api/timetable instead of resolving mock data.
-      const created = await timetableService.createEvent(values);
+      const created = await timetableService.create(values);
       setEvents((prev) => [...prev, created]);
       setDialogOpen(false);
+    } catch (err) {
+      console.error("Failed to create schedule:", err);
+      // TODO: show user-facing error toast
     } finally {
       setSubmitting(false);
     }
@@ -105,7 +105,7 @@ export default function TimetablePage() {
             <ChevronLeft className="h-4 w-4" />
           </button>
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {weekLabel}
+            Current Week
           </p>
           <button
             type="button"
@@ -139,45 +139,49 @@ export default function TimetablePage() {
         </div>
       )}
 
-      {status === "success" && view === "Day" && weekDays.length === 0 && (
-  <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center dark:border-slate-700 dark:bg-surface-dark-card">
-    <p className="text-sm text-slate-500 dark:text-slate-400">
-      No timetable set up yet. Add a schedule to get started.
-    </p>
-  </div>
-)}
+      {status === "success" && view === "Day" && events.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center dark:border-slate-700 dark:bg-surface-dark-card">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            No timetable set up yet. Add a schedule to get started.
+          </p>
+        </div>
+      )}
 
-{status === "success" && view === "Day" && weekDays.length > 0 && (
-  <div>
-    <div className="mb-4 flex flex-wrap gap-2">
-      {weekDays.map((d) => (
-        <button
-          key={d.dayIndex}
-          type="button"
-          onClick={() => setActiveDayIndex(d.dayIndex)}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-            activeDayIndex === d.dayIndex
-              ? "bg-brand-600 text-white"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-          }`}
-        >
-          {d.label} {d.date}
-        </button>
-      ))}
-    </div>
-    <DayView
-      day={weekDays.find((d) => d.dayIndex === activeDayIndex)}
-      events={eventsByDay[activeDayIndex] || []}
-    />
-  </div>
-)}ss
+      {status === "success" && view === "Day" && events.length > 0 && (
+        <div>
+          <div className="mb-4 flex flex-wrap gap-2">
+            {WEEKDAYS.map((dayName, index) => (
+              <button
+                key={dayName}
+                type="button"
+                onClick={() => setActiveDayIndex(index)}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  activeDayIndex === index
+                    ? "bg-brand-600 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                }`}
+              >
+                {dayName}
+              </button>
+            ))}
+          </div>
+          <DayView
+            day={WEEKDAYS[activeDayIndex]}
+            events={eventsByDay[WEEKDAYS[activeDayIndex]] || []}
+          />
+        </div>
+      )}
+
+      {status === "success" && view === "Week" && (
+        <WeekView eventsByDay={eventsByDay} />
+      )}
 
       {status === "success" && (
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2">
           {timetableLegend.map((item) => {
             const theme = getTheme(item.colorId);
             return (
-              <div key={item.subjectId} className="flex items-center gap-2">
+              <div key={item.colorId} className="flex items-center gap-2">
                 <span className={`h-2.5 w-2.5 rounded-full ${theme.dot}`} />
                 <span className="text-xs text-slate-500 dark:text-slate-400">
                   {item.label}

@@ -17,7 +17,7 @@ export async function apiRequest(path, options = {}, fallbackValue = undefined) 
     ...options,
     headers: {
       Accept: "application/json",
-      "x-user-id": import.meta.env.VITE_TEMP_USER_ID || "1",
+      "x-user-id": "1",
       ...(options.headers || {}),
     },
   };

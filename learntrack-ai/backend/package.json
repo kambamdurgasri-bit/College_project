@@ -18,11 +18,13 @@
     "schema": "prisma/schema"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
+    "@google/genai": "^2.23.0",
     "@prisma/client": "^6",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "multer": "^2.4.0",
+    "pdf-parse": "^1.1.1",
     "pg": "^8.23.0"
   },
   "devDependencies": {

@@ -1,5 +1,6 @@
 import CalendarCard from "./CalendarCard";
 import { HOUR_HEIGHT, START_HOUR, END_HOUR } from "./ScheduleCard";
+import { WEEKDAYS, timeToMinutes } from "../../utils/timetableHelpers";
 
 const TIME_LABELS = Array.from(
   { length: (END_HOUR - START_HOUR) / 2 + 1 },
@@ -12,7 +13,7 @@ const formatLabel = (hour) => {
   return `${displayHour} ${period}`;
 };
 
-export default function WeekView({ weekDays, eventsByDay, todayIndex, onEventClick }) {
+export default function WeekView({ eventsByDay, onEventClick }) {
   const gridHeight = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
 
   return (
@@ -36,12 +37,15 @@ export default function WeekView({ weekDays, eventsByDay, todayIndex, onEventCli
 
         {/* Day columns */}
         <div className="flex flex-1">
-          {weekDays.map((day, index) => (
-            <div key={day.dayIndex} style={{ minHeight: gridHeight + 45 }} className="flex flex-1 flex-col">
+          {WEEKDAYS.map((dayName) => (
+            <div
+              key={dayName}
+              style={{ minHeight: gridHeight + 45 }}
+              className="flex flex-1 flex-col"
+            >
               <CalendarCard
-                day={day}
-                events={eventsByDay[day.dayIndex] || []}
-                isToday={index === todayIndex}
+                day={dayName}
+                events={eventsByDay[dayName] || []}
                 onEventClick={onEventClick}
               />
             </div>
