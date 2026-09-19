@@ -1,9 +1,11 @@
-// OWNER: Madhavi. Replace with real analytics routes once you push.
 import express from "express";
+import tempAuth from "../../middleware/tempAuth.js";
+import * as controller from "./analytics.controller.js";
+
 const router = express.Router();
 
-router.use((req, res) => {
-  res.status(501).json({ error: "Analytics routes not implemented yet." });
-});
+router.use(tempAuth);
+
+router.get("/", controller.getAnalytics);
 
 export default router;
