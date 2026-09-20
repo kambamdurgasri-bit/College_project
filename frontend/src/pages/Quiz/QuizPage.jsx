@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   ArrowRight,
   ArrowLeft,
@@ -1589,10 +1590,35 @@ function QuizHistoryPage({ goTo }) {
 // ============================================================================
 
 export default function QuizPage({ initialScreen = "home" }) {
+  const location = useLocation();
   const [screen, setScreen] = useState(initialScreen);
   const [screenParams, setScreenParams] = useState({});
   const [quizConfig, setQuizConfig] = useState(null);
   const [quizResult, setQuizResult] = useState(null);
+  const [loadingDirectQuiz, setLoadingDirectQuiz] = useState(false);
+
+  useEffect(() => {
+    const directQuizId = location.state?.quizId;
+    if (directQuizId) {
+      setLoadingDirectQuiz(true);
+      quizService
+        .getForAttempt(directQuizId)
+        .then((q) => {
+          if (q) {
+            setQuizConfig({
+              id: q.id,
+              subject: location.state?.topic || q.topic,
+              topic: q.topic,
+              difficulty: q.difficulty,
+              count: q.questions.length,
+              questions: q.questions,
+            });
+            setScreen("instructions");
+          }
+        })
+        .finally(() => setLoadingDirectQuiz(false));
+    }
+  }, [location.state?.quizId]);
 
   const goTo = (newScreen, params = {}) => {
     setScreen(newScreen);
@@ -1616,6 +1642,15 @@ export default function QuizPage({ initialScreen = "home" }) {
   const handleReviewAnswers = () => {
     goTo("review");
   };
+
+  if (loadingDirectQuiz) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loader2 size={32} className="animate-spin text-purple-600 mb-3" />
+        <p className="text-sm font-medium text-slate-600">Loading AI Quiz...</p>
+      </div>
+    );
+  }
 
   if (screen === "home") {
     return <QuizHome goTo={goTo} />;
