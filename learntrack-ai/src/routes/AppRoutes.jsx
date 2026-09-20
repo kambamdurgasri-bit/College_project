@@ -51,7 +51,7 @@ export default function AppRoutes() {
         />
 
         {/* Out-of-scope routes kept as placeholders so sidebar nav never 404s */}
-        <Route path="/dashboard" element={<ComingSoonPage title="Dashboard" />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/ai-recommendations" element={<AIRecommendationsPage />} />
 
