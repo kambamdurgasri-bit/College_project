@@ -1,31 +1,31 @@
-// OWNER: Durga — Dashboard, Learning Spaces, Timetable, Topic Quiz, Quiz History.
-// Translated from the old backend/prisma/contract.prisma (Prisma 8 RC) into
-// standard Prisma schema language. Table names/columns are unchanged so no
-// existing data or naming would need to migrate later.
-
 model LearningSpaces {
-  id      Int       @id @default(autoincrement())
-  userId  Int       @map("user_id")
-  name    String    @db.VarChar(100)
-
-  user    Users     @relation(fields: [userId], references: [id])
-  quizzes Quizzes[]
+  id          Int          @id @default(autoincrement())
+  userId      Int          @map("user_id")
+  name        String       @db.VarChar(100)
+  colorId     String       @default("purple") @map("color_id") @db.VarChar(30)
+  icon        String       @default("bot") @db.VarChar(50)
+  user        Users        @relation(fields: [userId], references: [id])
+  progress    Progress[]
+  quizzes     Quizzes[]
+  timetables  Timetables[] // schedules that reference this space
 
   @@index([userId])
   @@map("learning_spaces")
 }
 
 model Timetables {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  day       String   @db.VarChar(20)
-  subject   String   @db.VarChar(100)
-  startTime String @map("start_time") @db.VarChar(5)
-  endTime   String @map("end_time") @db.VarChar(5)
-
-  user      Users    @relation(fields: [userId], references: [id])
+  id              Int             @id @default(autoincrement())
+  userId          Int             @map("user_id")
+  day             String          @db.VarChar(20)
+  subject         String          @db.VarChar(100) // kept for backward compat; always mirrors learningSpace.name
+  startTime       String          @map("start_time") @db.VarChar(5)
+  endTime         String          @map("end_time") @db.VarChar(5)
+  learningSpaceId Int?            @map("learning_space_id") // nullable FK — SET NULL on space delete
+  user            Users           @relation(fields: [userId], references: [id])
+  learningSpace   LearningSpaces? @relation(fields: [learningSpaceId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([learningSpaceId])
   @@map("timetables")
 }
 
@@ -35,24 +35,22 @@ model Quizzes {
   topic           String         @db.VarChar(100)
   difficulty      String         @db.VarChar(20)
   quizType        String         @default("TOPIC") @map("quiz_type") @db.VarChar(20)
-
-  learningSpace   LearningSpaces @relation(fields: [learningSpaceId], references: [id])
   questions       Questions[]
   quizAttempts    QuizAttempts[]
+  learningSpace   LearningSpaces @relation(fields: [learningSpaceId], references: [id])
 
   @@index([learningSpaceId])
   @@map("quizzes")
 }
 
 model Questions {
-  questionId    Int              @id @default(autoincrement()) @map("question_id")
-  quizId        Int              @map("quiz_id")
-  questionText  String           @map("question_text")
-  correctAnswer String           @map("correct_answer")
-  options       String[]         @default([]) @map("options")
-
-  quiz          Quizzes          @relation(fields: [quizId], references: [id])
+  questionId     Int              @id @default(autoincrement()) @map("question_id")
+  quizId         Int              @map("quiz_id")
+  questionText   String           @map("question_text")
+  correctAnswer  String           @map("correct_answer")
+  options        String[]         @default([]) @map("options")
   attemptAnswers AttemptAnswers[]
+  quiz           Quizzes          @relation(fields: [quizId], references: [id])
 
   @@index([quizId])
   @@map("questions")
@@ -64,10 +62,9 @@ model QuizAttempts {
   userId         Int              @map("user_id")
   attemptedAt    DateTime         @default(now()) @map("attempted_at")
   score          Int
-
+  attemptAnswers AttemptAnswers[]
   quiz           Quizzes          @relation(fields: [quizId], references: [id])
   user           Users            @relation(fields: [userId], references: [id])
-  attemptAnswers AttemptAnswers[]
 
   @@index([quizId])
   @@index([userId])
@@ -79,7 +76,6 @@ model AttemptAnswers {
   quizAttemptId  Int          @map("quiz_attempt_id")
   questionId     Int          @map("question_id")
   selectedAnswer String       @map("selected_answer")
-
   question       Questions    @relation(fields: [questionId], references: [questionId])
   quizAttempt    QuizAttempts @relation(fields: [quizAttemptId], references: [quizAttemptId])
 

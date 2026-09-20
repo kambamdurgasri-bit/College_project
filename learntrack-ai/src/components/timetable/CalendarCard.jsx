@@ -10,7 +10,7 @@ const gridLineStyle = {
     `rgba(148,163,184,0.15) ${HOUR_HEIGHT * 2}px)`,
 };
 
-export default function CalendarCard({ day, events, onEventClick }) {
+export default function CalendarCard({ day, events, onEventClick, onDeleteClick }) {
   const hasEvents = events.length > 0;
   const isRestDay = !hasEvents;
 
@@ -35,7 +35,8 @@ export default function CalendarCard({ day, events, onEventClick }) {
             <ScheduleCard
               key={event.id}
               event={event}
-              onClick={() => onEventClick?.(event)}
+              onEdit={onEventClick}
+              onDelete={onDeleteClick}
             />
           ))
         )}

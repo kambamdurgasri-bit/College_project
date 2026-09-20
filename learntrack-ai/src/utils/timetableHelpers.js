@@ -3,9 +3,12 @@ import { timetableLegend } from "../mock-data/timetable";
 
 // Map subject name to a color ID consistently (using string hash)
 export function getColorIdBySubject(subjectName) {
-  // Try to find it in the legend first
+  if (!subjectName || typeof subjectName !== "string") {
+    return "purple";
+  }
+  const clean = subjectName.trim().toLowerCase();
   const legendItem = timetableLegend.find(
-    (item) => item.label.toLowerCase() === subjectName.toLowerCase()
+    (item) => item.label.toLowerCase() === clean
   );
   if (legendItem) return legendItem.colorId;
 
@@ -21,16 +24,20 @@ export function getColorIdBySubject(subjectName) {
 
 // Parse time string "HH:mm" to minutes since midnight
 export function timeToMinutes(timeStr) {
+  if (!timeStr || typeof timeStr !== "string") return 0;
   const [hours, minutes] = timeStr.split(":").map(Number);
-  return hours * 60 + minutes;
+  return (hours || 0) * 60 + (minutes || 0);
 }
 
 // Format "HH:mm" string to 12-hour display "h:mm AM/PM"
 export function formatTime12Hour(timeStr) {
+  if (!timeStr || typeof timeStr !== "string") return "12:00 AM";
   const [hours, minutes] = timeStr.split(":").map(Number);
-  const period = hours >= 12 ? "PM" : "AM";
-  const displayHour = hours % 12 === 0 ? 12 : hours % 12;
-  return `${displayHour}:${minutes.toString().padStart(2, "0")} ${period}`;
+  const h = hours || 0;
+  const m = minutes || 0;
+  const period = h >= 12 ? "PM" : "AM";
+  const displayHour = h % 12 === 0 ? 12 : h % 12;
+  return `${displayHour}:${m.toString().padStart(2, "0")} ${period}`;
 }
 
 // Parse weekday name to index (0=Monday, 6=Sunday) for sorting

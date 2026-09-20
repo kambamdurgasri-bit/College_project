@@ -1,22 +1,63 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, AlertTriangle } from "lucide-react";
 import PageHeader from "../../components/common/PageHeader";
 import Dialog from "../../components/common/Dialog";
 import WeekView from "../../components/timetable/WeekView";
 import DayView from "../../components/timetable/DayView";
 import AddScheduleForm from "../../components/timetable/AddScheduleForm";
+import EditScheduleForm from "../../components/timetable/EditScheduleForm";
 import { timetableService } from "../../services/timetableService";
 import { getTheme } from "../../utils/theme";
 import { timetableLegend } from "../../mock-data/timetable";
 import { WEEKDAYS } from "../../utils/timetableHelpers";
 
+// Returns the WEEKDAYS index (0=Mon … 6=Sun) for today.
+function getTodayIndex() {
+  const day = new Date().getDay(); // JS: 0=Sun, 1=Mon … 6=Sat
+  return day === 0 ? 6 : day - 1;  // remap to Mon=0 … Sun=6
+}
+
+// Returns a formatted week label for the Monday-starting week
+// at `offset` weeks from the current week.
+function getWeekLabel(offset) {
+  const today = new Date();
+  const dow = today.getDay(); // 0=Sun…6=Sat
+  const diffToMonday = dow === 0 ? -6 : 1 - dow;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + diffToMonday + offset * 7);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const fmt = (d, includeYear = false) =>
+    d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      ...(includeYear ? { year: "numeric" } : {}),
+    });
+
+  return monday.getFullYear() === sunday.getFullYear()
+    ? `${fmt(monday)} – ${fmt(sunday, true)}`
+    : `${fmt(monday, true)} – ${fmt(sunday, true)}`;
+}
+
 export default function TimetablePage() {
   const [status, setStatus] = useState("loading");
   const [events, setEvents] = useState([]);
-  const [view, setView] = useState("Day"); // Week | Day
-  const [activeDayIndex, setActiveDayIndex] = useState(0);
+  const [view, setView] = useState("Day"); // "Week" | "Day"
+  const [activeDayIndex, setActiveDayIndex] = useState(getTodayIndex);
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  // ── Add dialog ────────────────────────────────────────────────────
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [addError, setAddError] = useState(null);
+
+  // ── Edit / Delete dialog ──────────────────────────────────────────
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editError, setEditError] = useState(null);
 
   // Load timetable on mount
   useEffect(() => {
@@ -41,25 +82,104 @@ export default function TimetablePage() {
   const eventsByDay = useMemo(() => {
     const map = {};
     events.forEach((e) => {
+      if (!e) return;
       map[e.day] = map[e.day] || [];
       map[e.day].push(e);
     });
     return map;
   }, [events]);
 
+  // ── Add Schedule ──────────────────────────────────────────────────
   const handleAddSchedule = async (values) => {
     setSubmitting(true);
+    setAddError(null);
     try {
       const created = await timetableService.create(values);
+      if (!created || !created.id) {
+        throw new Error("Failed to create schedule.");
+      }
       setEvents((prev) => [...prev, created]);
       setDialogOpen(false);
     } catch (err) {
-      console.error("Failed to create schedule:", err);
-      // TODO: show user-facing error toast
+      setAddError(err.message || "Failed to add schedule. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
+
+  // ── Event click → open Edit dialog ───────────────────────────────
+  const handleEventClick = useCallback((event) => {
+    setSelectedEvent(event);
+    setEditError(null);
+    setEditDialogOpen(true);
+  }, []);
+
+  const closeEditDialog = () => {
+    setEditDialogOpen(false);
+    setSelectedEvent(null);
+    setEditError(null);
+  };
+
+  // ── Direct Delete (from card upper right menu) ───────────────────
+  const handleDirectDelete = useCallback(async (event) => {
+    if (!event) return;
+    try {
+      await timetableService.delete(event.id);
+      setEvents((prev) => prev.filter((e) => e.id !== event.id));
+    } catch (err) {
+      setSelectedEvent(event);
+      setEditError(err.message || "Failed to delete schedule.");
+      setEditDialogOpen(true);
+    }
+  }, []);
+
+  // ── Update Schedule ───────────────────────────────────────────────
+  const handleUpdateSchedule = async (values) => {
+    if (!selectedEvent) return;
+    setEditSubmitting(true);
+    setEditError(null);
+    try {
+      const updated = await timetableService.update(selectedEvent.id, values);
+      if (!updated || !updated.id) {
+        throw new Error("Invalid timetable update response.");
+      }
+      setEvents((prev) =>
+        prev.map((e) => (e.id === selectedEvent.id ? updated : e))
+      );
+      closeEditDialog();
+    } catch (err) {
+      setEditError(err.message || "Failed to update schedule. Please try again.");
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  // ── Delete Schedule (from modal) ──────────────────────────────────
+  const handleDeleteSchedule = async () => {
+    if (!selectedEvent) return;
+    setDeleting(true);
+    setEditError(null);
+    try {
+      await timetableService.delete(selectedEvent.id);
+      setEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
+      closeEditDialog();
+    } catch (err) {
+      setEditError(err.message || "Failed to delete schedule. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // ── Week navigation ───────────────────────────────────────────────
+  const handlePrevWeek = () => setWeekOffset((o) => o - 1);
+  const handleNextWeek = () => setWeekOffset((o) => o + 1);
+  const handleToday = () => {
+    setWeekOffset(0);
+    setActiveDayIndex(getTodayIndex());
+  };
+
+  const weekLabel =
+    weekOffset === 0 ? "Current Week" : getWeekLabel(weekOffset);
 
   return (
     <div>
@@ -86,7 +206,10 @@ export default function TimetablePage() {
             </div>
             <button
               type="button"
-              onClick={() => setDialogOpen(true)}
+              onClick={() => {
+                setAddError(null);
+                setDialogOpen(true);
+              }}
               className="flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
             >
               <Plus className="h-4 w-4" /> Add Schedule
@@ -99,16 +222,18 @@ export default function TimetablePage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={handlePrevWeek}
             className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-white/5"
             aria-label="Previous week"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            Current Week
+          <p className="min-w-[160px] text-center text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {weekLabel}
           </p>
           <button
             type="button"
+            onClick={handleNextWeek}
             className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-white/5"
             aria-label="Next week"
           >
@@ -117,6 +242,7 @@ export default function TimetablePage() {
         </div>
         <button
           type="button"
+          onClick={handleToday}
           className="rounded-xl border border-slate-200 px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-white/5"
         >
           Today
@@ -168,12 +294,18 @@ export default function TimetablePage() {
           <DayView
             day={WEEKDAYS[activeDayIndex]}
             events={eventsByDay[WEEKDAYS[activeDayIndex]] || []}
+            onEventClick={handleEventClick}
+            onDeleteClick={handleDirectDelete}
           />
         </div>
       )}
 
       {status === "success" && view === "Week" && (
-        <WeekView eventsByDay={eventsByDay} />
+        <WeekView
+          eventsByDay={eventsByDay}
+          onEventClick={handleEventClick}
+          onDeleteClick={handleDirectDelete}
+        />
       )}
 
       {status === "success" && (
@@ -192,6 +324,7 @@ export default function TimetablePage() {
         </div>
       )}
 
+      {/* ── Add Schedule Dialog ─────────────────────────────────── */}
       <Dialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -202,7 +335,28 @@ export default function TimetablePage() {
           submitting={submitting}
           onSubmit={handleAddSchedule}
           onCancel={() => setDialogOpen(false)}
+          error={addError}
         />
+      </Dialog>
+
+      {/* ── Edit / Delete Dialog ────────────────────────────────── */}
+      <Dialog
+        open={editDialogOpen}
+        onClose={closeEditDialog}
+        title="Edit Schedule"
+        description="Update or remove this study session."
+      >
+        {selectedEvent && (
+          <EditScheduleForm
+            initialValues={selectedEvent}
+            submitting={editSubmitting}
+            deleting={deleting}
+            onSubmit={handleUpdateSchedule}
+            onDelete={handleDeleteSchedule}
+            onCancel={closeEditDialog}
+            error={editError}
+          />
+        )}
       </Dialog>
     </div>
   );

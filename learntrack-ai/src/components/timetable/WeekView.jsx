@@ -1,6 +1,6 @@
 import CalendarCard from "./CalendarCard";
 import { HOUR_HEIGHT, START_HOUR, END_HOUR } from "./ScheduleCard";
-import { WEEKDAYS, timeToMinutes } from "../../utils/timetableHelpers";
+import { WEEKDAYS } from "../../utils/timetableHelpers";
 
 const TIME_LABELS = Array.from(
   { length: (END_HOUR - START_HOUR) / 2 + 1 },
@@ -13,7 +13,7 @@ const formatLabel = (hour) => {
   return `${displayHour} ${period}`;
 };
 
-export default function WeekView({ eventsByDay, onEventClick }) {
+export default function WeekView({ eventsByDay, onEventClick, onDeleteClick }) {
   const gridHeight = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
 
   return (
@@ -47,6 +47,7 @@ export default function WeekView({ eventsByDay, onEventClick }) {
                 day={dayName}
                 events={eventsByDay[dayName] || []}
                 onEventClick={onEventClick}
+                onDeleteClick={onDeleteClick}
               />
             </div>
           ))}

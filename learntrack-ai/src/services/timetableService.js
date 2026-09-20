@@ -1,15 +1,18 @@
 // Service layer for timetable management.
-// All API calls go through here — no fallbacks to mock data.
 import { apiRequest } from "./api";
 
 export const timetableService = {
-  // GET /api/timetable (apiRequest adds /api/ prefix)
+  // GET /api/timetable
+  // Returns events with nested learningSpace: { id, name, colorId } | null
   async list() {
-    const data = await apiRequest("/timetable", { method: "GET" });
-    return data || [];
+    const data = await apiRequest("/timetable", {
+      method: "GET",
+    });
+    return Array.isArray(data) ? data : [];
   },
 
   // POST /api/timetable
+  // payload: { learningSpaceId, day, startTime, endTime }
   async create(payload) {
     return await apiRequest("/timetable", {
       method: "POST",
@@ -18,6 +21,7 @@ export const timetableService = {
   },
 
   // PUT /api/timetable/:id
+  // payload: { learningSpaceId?, day?, startTime?, endTime? }
   async update(id, payload) {
     return await apiRequest(`/timetable/${id}`, {
       method: "PUT",
