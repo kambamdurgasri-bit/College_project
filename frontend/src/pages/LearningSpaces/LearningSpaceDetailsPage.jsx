@@ -27,7 +27,6 @@ import SubjectIcon from "../../components/common/SubjectIcon";
 import ProgressRing from "../../components/common/ProgressRing";
 import StatisticCard from "../../components/common/StatisticCard";
 import { learningSpaceService } from "../../services/learningSpaceService";
-import { progressOverview, recentActivity } from "../../mock-data/activity";
 import { getTheme } from "../../utils/theme";
 
 const TABS = ["Overview", "Topics", "Resources", "Activity", "Quizzes", "Notes"];
@@ -111,6 +110,12 @@ export default function LearningSpaceDetailsPage() {
   }
 
   const theme = getTheme(space.colorId);
+  const progressOverview = [
+    { date: "Day 1", progress: Math.max(0, space.progress - 30) },
+    { date: "Day 2", progress: Math.max(0, space.progress - 15) },
+    { date: "Today", progress: space.progress },
+  ];
+  const recentActivity = [];
 
   return (
     <div>
@@ -169,7 +174,7 @@ export default function LearningSpaceDetailsPage() {
             <StatisticCard icon={Layers} label="Total Topics" value={space.topicsTotal} colorId="blue" />
             <StatisticCard icon={CheckCircle2} label="Completed" value={space.topicsCompleted} colorId="green" />
             <StatisticCard icon={Clock} label="In Progress" value={space.topicsInProgress} colorId="purple" />
-            <StatisticCard icon={Circle} label="Not Started" value={space.topicsNotStarted} colorId="red" />
+            <StatisticCard icon={Circle} label="Not Started" value={space.topicsNotStarted || 0} colorId="red" />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -213,28 +218,25 @@ export default function LearningSpaceDetailsPage() {
                 <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                   Recent Activity
                 </h3>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("Activity")}
-                  className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400"
-                >
-                  View All
-                </button>
               </div>
-              <ul className="space-y-3.5">
-                {recentActivity.map((item) => {
-                  const Icon = ACTIVITY_ICON[item.type] || CheckCircle;
-                  return (
-                    <li key={item.id} className="flex items-start gap-3">
-                      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
-                      <div>
-                        <p className="text-sm text-slate-700 dark:text-slate-200">{item.label}</p>
-                        <p className="text-xs text-slate-400">{item.time}</p>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              {recentActivity.length === 0 ? (
+                <p className="p-4 text-center text-xs text-slate-400">No activity recorded yet for this space.</p>
+              ) : (
+                <ul className="space-y-3.5">
+                  {recentActivity.map((item) => {
+                    const Icon = ACTIVITY_ICON[item.type] || CheckCircle;
+                    return (
+                      <li key={item.id} className="flex items-start gap-3">
+                        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
+                        <div>
+                          <p className="text-sm text-slate-700 dark:text-slate-200">{item.label}</p>
+                          <p className="text-xs text-slate-400">{item.time}</p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           </div>
 
@@ -289,10 +291,7 @@ export default function LearningSpaceDetailsPage() {
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center dark:border-slate-700 dark:bg-surface-dark-card">
-          <p className="font-medium text-slate-700 dark:text-slate-200">{activeTab} coming soon</p>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            This section is outside Module 3's current scope.
-          </p>
+          <p className="font-medium text-slate-700 dark:text-slate-200">{activeTab} section</p>
         </div>
       )}
     </div>

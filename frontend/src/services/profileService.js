@@ -1,9 +1,22 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "./api.js";
-import { mockUser } from "../mock-data/mockUser.js";
 
 const PROFILE_STORAGE_KEY = "learntrack-profile";
 const PREFERENCES_STORAGE_KEY = "learntrack-preferences";
+
+const defaultProfile = {
+  fullName: "User",
+  email: "user@example.com",
+  phone: "Not provided",
+  dob: "2000-01-01",
+  gender: "Not Specified",
+  university: "State University",
+  branch: "Computer Science",
+  department: "Computer Science & Engineering",
+  learningLevel: "Intermediate",
+  about: "Active learner tracking progress on LearnTrack AI.",
+  avatar: "https://api.dicebear.com/7.x/notionists/svg?seed=User&backgroundColor=F4F2FF",
+};
 
 const defaultPreferences = {
   notifications: {
@@ -21,15 +34,15 @@ const listeners = new Set();
 let profile = readStoredProfile();
 
 function readStoredProfile() {
-  if (typeof window === "undefined") return { ...mockUser };
+  if (typeof window === "undefined") return { ...defaultProfile };
   try {
     const stored = window.localStorage.getItem(PROFILE_STORAGE_KEY);
     const parsed = stored ? JSON.parse(stored) : {};
     return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? { ...mockUser, ...parsed }
-      : { ...mockUser };
+      ? { ...defaultProfile, ...parsed }
+      : { ...defaultProfile };
   } catch {
-    return { ...mockUser };
+    return { ...defaultProfile };
   }
 }
 
@@ -41,7 +54,7 @@ export async function getProfile() {
   try {
     const serverProfile = await apiRequest("/profile");
     if (serverProfile) {
-      profile = { ...mockUser, ...serverProfile };
+      profile = { ...defaultProfile, ...serverProfile };
       if (typeof window !== "undefined") {
         window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
       }

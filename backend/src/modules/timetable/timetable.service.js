@@ -19,12 +19,12 @@ function formatTime(val) {
   return String(val);
 }
 
-function parseTimeToDate(timeStr) {
-  if (!timeStr) return new Date("1970-01-01T09:00:00Z");
-  const [h, m] = timeStr.split(":");
-  const d = new Date("1970-01-01T00:00:00Z");
-  d.setUTCHours(parseInt(h || "0", 10), parseInt(m || "0", 10), 0, 0);
-  return d;
+function parseTimeToIso(timeStr) {
+  if (!timeStr) return "1970-01-01T09:00:00.000Z";
+  if (typeof timeStr === "string" && /^([01]\d|2[0-3]):([0-5]\d)$/.test(timeStr)) {
+    return `1970-01-01T${timeStr}:00.000Z`;
+  }
+  return String(timeStr);
 }
 
 function mapTimetableRecord(entry) {
@@ -85,8 +85,8 @@ export async function create(userId, data) {
       userId,
       day: data.day,
       subject: subjectName,
-      startTime: parseTimeToDate(data.startTime),
-      endTime: parseTimeToDate(data.endTime),
+      startTime: parseTimeToIso(data.startTime),
+      endTime: parseTimeToIso(data.endTime),
     },
   });
 
@@ -111,8 +111,8 @@ export async function update(userId, id, data) {
     data: {
       ...(subjectName && { subject: subjectName }),
       ...(data.day && { day: data.day }),
-      ...(data.startTime && { startTime: parseTimeToDate(data.startTime) }),
-      ...(data.endTime && { endTime: parseTimeToDate(data.endTime) }),
+      ...(data.startTime && { startTime: parseTimeToIso(data.startTime) }),
+      ...(data.endTime && { endTime: parseTimeToIso(data.endTime) }),
     },
   });
 

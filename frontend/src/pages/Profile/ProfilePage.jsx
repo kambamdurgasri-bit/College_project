@@ -6,7 +6,6 @@ import DetailsCard from "../../components/profile/DetailsCard.jsx";
 import AchievementCard from "../../components/profile/AchievementCard.jsx";
 import TimelineCard from "../../components/profile/TimelineCard.jsx";
 import UploadPictureModal from "../../components/profile/UploadPictureModal.jsx";
-import { achievements, activityTimeline, quickStats } from "../../mock-data/mockUser.js";
 import { fileToDataUrl, updateProfile, useProfile } from "../../services/profileService.js";
 
 export default function ProfilePage() {
@@ -45,6 +44,10 @@ export default function ProfilePage() {
     );
   }
 
+  const quickStats = user.quickStats || [];
+  const achievements = user.achievements || { badges: [], certificates: [], milestones: [] };
+  const activityTimeline = user.activityTimeline || [];
+
   return (
     <div className="space-y-6">
       <ProfileCard
@@ -57,11 +60,13 @@ export default function ProfilePage() {
         currentAvatar={user.avatar}
         onSave={saveAvatar}
       />
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        {quickStats.map((stat, index) => (
-          <StatsCard key={stat.label} {...stat} index={index} />
-        ))}
-      </div>
+      {quickStats.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          {quickStats.map((stat, index) => (
+            <StatsCard key={stat.label} {...stat} index={index} />
+          ))}
+        </div>
+      )}
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="space-y-6 lg:col-span-3">
           <DetailsCard user={user} />

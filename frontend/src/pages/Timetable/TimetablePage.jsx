@@ -8,20 +8,16 @@ import AddScheduleForm from "../../components/timetable/AddScheduleForm";
 import EditScheduleForm from "../../components/timetable/EditScheduleForm";
 import { timetableService } from "../../services/timetableService";
 import { getTheme } from "../../utils/theme";
-import { timetableLegend } from "../../mock-data/timetable";
-import { WEEKDAYS } from "../../utils/timetableHelpers";
+import { WEEKDAYS, timetableLegend } from "../../utils/timetableHelpers";
 
-// Returns the WEEKDAYS index (0=Mon … 6=Sun) for today.
 function getTodayIndex() {
-  const day = new Date().getDay(); // JS: 0=Sun, 1=Mon … 6=Sat
-  return day === 0 ? 6 : day - 1;  // remap to Mon=0 … Sun=6
+  const day = new Date().getDay();
+  return day === 0 ? 6 : day - 1;
 }
 
-// Returns a formatted week label for the Monday-starting week
-// at `offset` weeks from the current week.
 function getWeekLabel(offset) {
   const today = new Date();
-  const dow = today.getDay(); // 0=Sun…6=Sat
+  const dow = today.getDay();
   const diffToMonday = dow === 0 ? -6 : 1 - dow;
   const monday = new Date(today);
   monday.setDate(today.getDate() + diffToMonday + offset * 7);
@@ -43,23 +39,20 @@ function getWeekLabel(offset) {
 export default function TimetablePage() {
   const [status, setStatus] = useState("loading");
   const [events, setEvents] = useState([]);
-  const [view, setView] = useState("Day"); // "Week" | "Day"
+  const [view, setView] = useState("Day");
   const [activeDayIndex, setActiveDayIndex] = useState(getTodayIndex);
   const [weekOffset, setWeekOffset] = useState(0);
 
-  // ── Add dialog ────────────────────────────────────────────────────
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [addError, setAddError] = useState(null);
 
-  // ── Edit / Delete dialog ──────────────────────────────────────────
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editError, setEditError] = useState(null);
 
-  // Load timetable on mount
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
@@ -78,7 +71,6 @@ export default function TimetablePage() {
     };
   }, []);
 
-  // Group events by day name for display
   const eventsByDay = useMemo(() => {
     const map = {};
     events.forEach((e) => {
@@ -89,7 +81,6 @@ export default function TimetablePage() {
     return map;
   }, [events]);
 
-  // ── Add Schedule ──────────────────────────────────────────────────
   const handleAddSchedule = async (values) => {
     setSubmitting(true);
     setAddError(null);
@@ -107,7 +98,6 @@ export default function TimetablePage() {
     }
   };
 
-  // ── Event click → open Edit dialog ───────────────────────────────
   const handleEventClick = useCallback((event) => {
     setSelectedEvent(event);
     setEditError(null);
@@ -120,7 +110,6 @@ export default function TimetablePage() {
     setEditError(null);
   };
 
-  // ── Direct Delete (from card upper right menu) ───────────────────
   const handleDirectDelete = useCallback(async (event) => {
     if (!event) return;
     try {
@@ -133,7 +122,6 @@ export default function TimetablePage() {
     }
   }, []);
 
-  // ── Update Schedule ───────────────────────────────────────────────
   const handleUpdateSchedule = async (values) => {
     if (!selectedEvent) return;
     setEditSubmitting(true);
@@ -154,7 +142,6 @@ export default function TimetablePage() {
     }
   };
 
-  // ── Delete Schedule (from modal) ──────────────────────────────────
   const handleDeleteSchedule = async () => {
     if (!selectedEvent) return;
     setDeleting(true);
@@ -170,7 +157,6 @@ export default function TimetablePage() {
     }
   };
 
-  // ── Week navigation ───────────────────────────────────────────────
   const handlePrevWeek = () => setWeekOffset((o) => o - 1);
   const handleNextWeek = () => setWeekOffset((o) => o + 1);
   const handleToday = () => {
@@ -324,7 +310,6 @@ export default function TimetablePage() {
         </div>
       )}
 
-      {/* ── Add Schedule Dialog ─────────────────────────────────── */}
       <Dialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -339,7 +324,6 @@ export default function TimetablePage() {
         />
       </Dialog>
 
-      {/* ── Edit / Delete Dialog ────────────────────────────────── */}
       <Dialog
         open={editDialogOpen}
         onClose={closeEditDialog}

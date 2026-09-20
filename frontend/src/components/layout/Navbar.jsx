@@ -2,7 +2,6 @@ import { Menu, Bell, Sun, Moon, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useThemeStore } from "../../store/themeStore";
 import { useProfile } from "../../services/profileService";
-import { currentUser } from "../../mock-data/user";
 
 export default function Navbar({ onMenuClick }) {
   const navigate = useNavigate();
@@ -10,7 +9,7 @@ export default function Navbar({ onMenuClick }) {
   const { data: userProfile } = useProfile();
 
   const avatarUrl = userProfile?.avatar;
-  const fullName = userProfile?.fullName || currentUser?.name || "User";
+  const fullName = userProfile?.fullName || userProfile?.name || "User";
   const initials = fullName
     ? fullName
         .split(" ")
@@ -52,12 +51,8 @@ export default function Navbar({ onMenuClick }) {
           aria-label="Notifications"
         >
           <Bell className="h-5 w-5" />
-          {currentUser.notificationCount > 0 && (
-            <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-surface-dark" />
-          )}
         </button>
 
-        {/* Existing Top-Right Profile / Avatar Icon -> Navigates to /profile */}
         <button
           type="button"
           onClick={() => navigate("/profile")}
