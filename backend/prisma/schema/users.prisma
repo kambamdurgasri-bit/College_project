@@ -1,0 +1,26 @@
+model Users {
+  id              Int               @id @default(autoincrement())
+  name            String            @db.VarChar(100)
+  email           String            @unique @db.VarChar(255)
+  passwordHash    String            @map("password_hash") @db.VarChar(255)
+  phoneNumber     String?           @map("phone_number") @db.VarChar(20)
+  learningSpaces  LearningSpaces[]
+  passwordResets  PasswordResets[]
+  progress        Progress[]
+  quizAttempts    QuizAttempts[]
+  recommendations Recommendations[]
+  timetables      Timetables[]
+
+  @@map("users")
+}
+
+model PasswordResets {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     String   @unique @db.VarChar(255)
+  expiresAt DateTime @map("expires_at")
+  user      Users    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("password_resets")
+}

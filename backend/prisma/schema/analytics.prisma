@@ -1,0 +1,30 @@
+model Recommendations {
+  id                 Int      @id @default(autoincrement())
+  userId             Int      @map("user_id")
+  recommendationType String   @map("recommendation_type") @db.VarChar(50)
+  recommendation     String
+  createdAt          DateTime @default(now()) @map("created_at")
+  user               Users    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("recommendations")
+}
+
+model Progress {
+  id              Int            @id @default(autoincrement())
+  userId          Int            @map("user_id")
+  learningSpaceId Int            @map("learning_space_id")
+  periodType      String         @map("period_type") @db.VarChar(20)
+  periodStart     DateTime       @map("period_start")
+  progress        Int
+  averageScore    Int            @map("average_score")
+  quizzesTaken    Int            @default(0) @map("quizzes_taken")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  learningSpace   LearningSpaces @relation(fields: [learningSpaceId], references: [id])
+  user            Users          @relation(fields: [userId], references: [id])
+
+  @@unique([userId, learningSpaceId, periodType, periodStart])
+  @@index([userId])
+  @@index([learningSpaceId])
+  @@map("progress")
+}

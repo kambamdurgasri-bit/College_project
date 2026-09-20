@@ -1,0 +1,71 @@
+import { useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import AppLayout from "../layouts/AppLayout";
+import LearningSpacesPage from "../pages/LearningSpaces/LearningSpacesPage";
+import CreateLearningSpacePage from "../pages/LearningSpaces/CreateLearningSpacePage";
+import EditLearningSpacePage from "../pages/LearningSpaces/EditLearningSpacePage";
+import LearningSpaceDetailsPage from "../pages/LearningSpaces/LearningSpaceDetailsPage";
+import TimetablePage from "../pages/Timetable/TimetablePage";
+import DashboardPage from "../pages/Dashboard/DashboardPage";
+import ProfilePage from "../pages/Profile/ProfilePage";
+import EditProfilePage from "../pages/Profile/EditProfilePage";
+import SettingsPage from "../pages/SettingsPage";
+import AnalyticsPage from "../pages/Analytics/AnalyticsPage";
+import SplashPage from "../pages/Auth/SplashPage";
+import LoginPage from "../pages/Auth/LoginPage";
+import RegisterPage from "../pages/Auth/RegisterPage";
+import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
+import AIRecommendationsPage from "../pages/AIRecommendations/AIRecommendationsPage";
+import QuizPage from "../pages/Quiz/QuizPage";
+import { useAuthStore } from "../store/authStore";
+
+export default function AppRoutes() {
+  const token = useAuthStore((s) => s.token);
+  const checkAuth = useAuthStore((s) => s.checkAuth);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  return (
+    <Routes>
+      {/* Landing Page & Auth Routes */}
+      <Route path="/" element={<SplashPage />} />
+      <Route path="/splash" element={<SplashPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+      <Route element={<AppLayout />}>
+
+        {/* Module 3: Learning Spaces */}
+        <Route path="/learning-spaces" element={<LearningSpacesPage />} />
+        <Route path="/learning-spaces/new" element={<CreateLearningSpacePage />} />
+        <Route path="/learning-spaces/:id" element={<LearningSpaceDetailsPage />} />
+        <Route path="/learning-spaces/:id/edit" element={<EditLearningSpacePage />} />
+
+        {/* Module 3: Timetable */}
+        <Route path="/timetable" element={<TimetablePage />} />
+
+        {/* Module 2: Profile */}
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/edit" element={<EditProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+
+        {/* Module 4: Quiz and Assessment */}
+        <Route path="/topic-quiz" element={<QuizPage key="topic-quiz" />} />
+        <Route
+          path="/quiz-history"
+          element={<QuizPage key="quiz-history" initialScreen="history" />}
+        />
+
+        {/* Out-of-scope routes kept as placeholders so sidebar nav never 404s */}
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/ai-recommendations" element={<AIRecommendationsPage />} />
+
+        <Route path="*" element={<Navigate to={token ? "/dashboard" : "/login"} replace />} />
+      </Route>
+    </Routes>
+  );
+}
