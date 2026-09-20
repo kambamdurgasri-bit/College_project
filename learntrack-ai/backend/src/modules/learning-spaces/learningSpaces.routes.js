@@ -1,10 +1,14 @@
 import express from "express";
-import tempAuth from "../../middleware/tempAuth.js";
 import * as controller from "./learningSpaces.controller.js";
 
 const router = express.Router();
 
-router.use(tempAuth);
+router.use((req, res, next) => {
+  if (!req.user) {
+    req.user = { id: parseInt(req.headers['x-user-id'] || 1, 10) };
+  }
+  next();
+});
 
 router.get("/", controller.list);
 router.post("/", controller.create);

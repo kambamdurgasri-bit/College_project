@@ -10,12 +10,16 @@
 // and test your routes with Postman/curl without a login system:
 //   x-user-id: 1
 export default function tempAuth(req, res, next) {
-  const userId = Number(req.header("x-user-id"));
-  if (!userId) {
-    return res.status(401).json({
-      error: "Missing x-user-id header (temporary auth stub — not real auth).",
-    });
-  }
-  req.user = { id: userId };
+  // === TEMP_AUTH_DISABLED_START ===
+  // const userId = Number(req.header("x-user-id"));
+  // if (!userId) {
+  //   return res.status(401).json({
+  //     error: "Missing x-user-id header (temporary auth stub — not real auth).",
+  //   });
+  // }
+  // req.user = { id: userId };
+  // next();
+  // === TEMP_AUTH_DISABLED_END ===
+  req.user = { id: 1 };
   next();
 }

@@ -6,11 +6,13 @@ import {
   getProgressForUser,
 } from "../controllers/progress.controller.js";
 
-import tempAuth from "../middleware/tempAuth.js";
+// === TEMP_AUTH_DISABLED_START ===
+// import tempAuth from "../middleware/tempAuth.js";
+// === TEMP_AUTH_DISABLED_END ===
 
 const router = express.Router();
 
-router.use(tempAuth);
+// === TEMP_AUTH_DISABLED_START === router.use(tempAuth) removed; progress routes are temporarily unauthenticated. === TEMP_AUTH_DISABLED_END ===
 
 router.get("/", getProgressForUser);
 
