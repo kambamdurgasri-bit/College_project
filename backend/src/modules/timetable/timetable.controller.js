@@ -5,29 +5,17 @@ const VALID_DAYS = [
 ];
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
-// Validate a positive integer learning space id.
-function validSpaceId(val) {
-  const n = Number(val);
-  return Number.isInteger(n) && n > 0;
-}
-
-// Full validation for create; partial for update.
 function validateBody(body, partial = false) {
-  const { learningSpaceId, day, startTime, endTime } = body;
+  const { day, startTime, endTime, subject, learningSpaceId } = body;
 
   if (!partial) {
-    // learningSpaceId is required on create
-    if (!validSpaceId(learningSpaceId)) {
-      return "learningSpaceId must be a positive integer.";
+    if (!subject && !learningSpaceId) {
+      return "subject or learningSpaceId is required.";
     }
     if (!VALID_DAYS.includes(day)) return "day must be a valid weekday name.";
     if (!TIME_RE.test(startTime)) return "startTime must be in HH:mm format.";
     if (!TIME_RE.test(endTime))   return "endTime must be in HH:mm format.";
   } else {
-    // All fields optional on update, but each must be valid if provided.
-    if (learningSpaceId !== undefined && !validSpaceId(learningSpaceId)) {
-      return "learningSpaceId must be a positive integer.";
-    }
     if (day !== undefined && !VALID_DAYS.includes(day)) {
       return "day must be a valid weekday name.";
     }
@@ -39,7 +27,6 @@ function validateBody(body, partial = false) {
     }
   }
 
-  // Cross-field: startTime must be before endTime whenever both are present.
   const s = startTime ?? body.startTime;
   const e = endTime ?? body.endTime;
   if (s && e && TIME_RE.test(s) && TIME_RE.test(e) && s >= e) {
@@ -70,16 +57,10 @@ export async function create(req, res, next) {
     const error = validateBody(req.body, false);
     if (error) return res.status(400).json({ error });
 
-    const entry = await service.create(req.user.id, {
-      learningSpaceId: Number(req.body.learningSpaceId),
-      day:             req.body.day,
-      startTime:       req.body.startTime,
-      endTime:         req.body.endTime,
-    });
-
+    const entry = await service.create(req.user.id, req.body);
     if (!entry) {
       return res.status(400).json({
-        error: "Learning space not found or does not belong to you.",
+        error: "Could not create schedule entry.",
       });
     }
     res.status(201).json(entry);
@@ -93,17 +74,10 @@ export async function update(req, res, next) {
     const error = validateBody(req.body, true);
     if (error) return res.status(400).json({ error });
 
-    const { learningSpaceId, day, startTime, endTime } = req.body;
-    const updated = await service.update(req.user.id, Number(req.params.id), {
-      ...(learningSpaceId !== undefined && { learningSpaceId: Number(learningSpaceId) }),
-      ...(day             !== undefined && { day }),
-      ...(startTime       !== undefined && { startTime }),
-      ...(endTime         !== undefined && { endTime }),
-    });
-
+    const updated = await service.update(req.user.id, Number(req.params.id), req.body);
     if (!updated) {
       return res.status(404).json({
-        error: "Schedule entry not found or learning space not accessible.",
+        error: "Schedule entry not found.",
       });
     }
     res.json(updated);

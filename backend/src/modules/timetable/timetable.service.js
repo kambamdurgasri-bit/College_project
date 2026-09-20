@@ -8,28 +8,57 @@ export function todayName() {
   return DAY_NAMES[new Date().getDay()];
 }
 
-// Always include the linked learning space so the frontend gets
-// { id, name, colorId } without a second round-trip.
-const INCLUDE_SPACE = {
-  learningSpace: {
-    select: { id: true, name: true, colorId: true },
-  },
-};
-
-export function listForUser(userId) {
-  return prisma.timetables.findMany({
-    where: { userId },
-    include: INCLUDE_SPACE,
-    orderBy: [{ day: "asc" }, { startTime: "asc" }],
-  });
+function formatTime(val) {
+  if (!val) return "09:00";
+  if (typeof val === "string") return val.substring(0, 5);
+  if (val instanceof Date) {
+    const hours = String(val.getUTCHours()).padStart(2, "0");
+    const minutes = String(val.getUTCMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  }
+  return String(val);
 }
 
-export function listForToday(userId) {
-  return prisma.timetables.findMany({
+function parseTimeToDate(timeStr) {
+  if (!timeStr) return new Date("1970-01-01T09:00:00Z");
+  const [h, m] = timeStr.split(":");
+  const d = new Date("1970-01-01T00:00:00Z");
+  d.setUTCHours(parseInt(h || "0", 10), parseInt(m || "0", 10), 0, 0);
+  return d;
+}
+
+function mapTimetableRecord(entry) {
+  const startTime = formatTime(entry.startTime);
+  const endTime = formatTime(entry.endTime);
+  return {
+    id: entry.id,
+    userId: entry.userId,
+    day: entry.day,
+    subject: entry.subject,
+    startTime,
+    endTime,
+    learningSpace: {
+      id: entry.id,
+      name: entry.subject,
+      colorId: "purple",
+    },
+  };
+}
+
+export async function listForUser(userId) {
+  const entries = await prisma.timetables.findMany({
+    where: { userId },
+    orderBy: [{ day: "asc" }, { startTime: "asc" }],
+  });
+  return entries.map(mapTimetableRecord);
+}
+
+export async function listForToday(userId) {
+  const entries = await prisma.timetables.findMany({
     where: { userId, day: todayName() },
-    include: INCLUDE_SPACE,
     orderBy: { startTime: "asc" },
   });
+  return entries.map(mapTimetableRecord);
 }
 
 export async function getOwned(userId, id) {
@@ -38,55 +67,56 @@ export async function getOwned(userId, id) {
   return entry;
 }
 
-// Verifies a learning space exists and belongs to the user.
-// Returns the space record, or null if not found / not owned.
-async function resolveSpace(userId, learningSpaceId) {
-  const space = await prisma.learningSpaces.findUnique({
-    where: { id: learningSpaceId },
-    select: { id: true, name: true, userId: true, colorId: true },
-  });
-  if (!space || space.userId !== userId) return null;
-  return space;
-}
-
 export async function create(userId, data) {
-  const space = await resolveSpace(userId, data.learningSpaceId);
-  if (!space) return null; // caller returns 400
+  let subjectName = data.subject || data.name;
 
-  return prisma.timetables.create({
+  if (!subjectName && data.learningSpaceId) {
+    const space = await prisma.learningSpaces.findUnique({
+      where: { id: Number(data.learningSpaceId) },
+      select: { name: true },
+    });
+    if (space) subjectName = space.name;
+  }
+
+  if (!subjectName) subjectName = "General Subject";
+
+  const entry = await prisma.timetables.create({
     data: {
       userId,
       day: data.day,
-      subject: space.name,       // keep subject in sync for backward compat
-      startTime: data.startTime,
-      endTime: data.endTime,
-      learningSpaceId: space.id,
+      subject: subjectName,
+      startTime: parseTimeToDate(data.startTime),
+      endTime: parseTimeToDate(data.endTime),
     },
-    include: INCLUDE_SPACE,
   });
+
+  return mapTimetableRecord(entry);
 }
 
 export async function update(userId, id, data) {
   const existing = await getOwned(userId, id);
   if (!existing) return null;
 
-  let spaceUpdate = {};
-  if (data.learningSpaceId !== undefined) {
-    const space = await resolveSpace(userId, data.learningSpaceId);
-    if (!space) return null; // caller returns 404
-    spaceUpdate = { learningSpaceId: space.id, subject: space.name };
+  let subjectName = data.subject || data.name;
+  if (!subjectName && data.learningSpaceId) {
+    const space = await prisma.learningSpaces.findUnique({
+      where: { id: Number(data.learningSpaceId) },
+      select: { name: true },
+    });
+    if (space) subjectName = space.name;
   }
 
-  return prisma.timetables.update({
+  const updated = await prisma.timetables.update({
     where: { id },
     data: {
-      ...spaceUpdate,
+      ...(subjectName && { subject: subjectName }),
       ...(data.day && { day: data.day }),
-      ...(data.startTime && { startTime: data.startTime }),
-      ...(data.endTime && { endTime: data.endTime }),
+      ...(data.startTime && { startTime: parseTimeToDate(data.startTime) }),
+      ...(data.endTime && { endTime: parseTimeToDate(data.endTime) }),
     },
-    include: INCLUDE_SPACE,
   });
+
+  return mapTimetableRecord(updated);
 }
 
 export async function remove(userId, id) {

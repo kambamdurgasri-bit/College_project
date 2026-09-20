@@ -28,6 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/learning-spaces', learningSpacesRoutes);
 app.use('/api/timetable', timetableRoutes);
 app.use('/api/quiz', quizRoutes);
+app.use('/api/quizzes', quizRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
 app.use('/api/dashboard', dashboardRoutes);

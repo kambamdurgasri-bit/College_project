@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   BarChart3,
-  BookMarked,
   GraduationCap,
   Percent,
   Target,
@@ -20,13 +19,7 @@ import {
   YAxis,
 } from "recharts";
 
-import {
-  trendData,
-  subjectPerformance,
-  recentActivity,
-} from "../../mock-data/analytics";
-
-const TREND_RANGES = ["Daily", "Weekly", "Monthly"];
+import { apiRequest } from "../../services/api";
 
 function Card({ children, className = "" }) {
   return (
@@ -38,13 +31,12 @@ function Card({ children, className = "" }) {
   );
 }
 
-function SectionHeading({ title, right }) {
+function SectionHeading({ title }) {
   return (
     <div className="mb-4 flex items-center justify-between gap-4">
       <h2 className="text-base font-semibold text-slate-900 dark:text-white">
         {title}
       </h2>
-      {right}
     </div>
   );
 }
@@ -81,39 +73,54 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 export default function AnalyticsPage() {
-  const [range, setRange] = useState("Weekly");
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const data = trendData[range];
+  useEffect(() => {
+    async function loadAnalytics() {
+      try {
+        setLoading(true);
+        const res = await apiRequest("/analytics");
+        setAnalytics(res);
+      } catch (err) {
+        console.error("Failed to fetch analytics:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadAnalytics();
+  }, []);
 
-  const averageScore = useMemo(() => {
-    if (!data.length) return 0;
-    return Math.round(
-      data.reduce((total, item) => total + item.score, 0) / data.length,
+  const totalAttempts = analytics?.quizStatistics?.totalAttempts ?? 0;
+  const avgScore = analytics?.quizStatistics?.averageScore ?? 0;
+
+  const subjectPerformance = (analytics?.subjectPerformance || []).map((sp) => ({
+    subject: sp.learningSpaceName,
+    score: sp.averageScore,
+    quizzesTaken: sp.quizzesTaken,
+  }));
+
+  const trendData = (analytics?.performanceTrend || []).map((t, idx) => ({
+    label: new Date(t.attemptedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    score: t.score,
+    topic: t.topic,
+  }));
+
+  const strongestSubject = subjectPerformance.length > 0
+    ? subjectPerformance.reduce((best, cur) => (cur.score > best.score ? cur : best))
+    : { subject: "N/A", score: 0 };
+
+  const weakestSubject = subjectPerformance.length > 0
+    ? subjectPerformance.reduce((worst, cur) => (cur.score < worst.score ? cur : worst))
+    : { subject: "N/A", score: 0 };
+
+  if (loading) {
+    return (
+      <div className="mx-auto w-full max-w-7xl p-8 text-center text-slate-500">
+        Loading analytics from database...
+      </div>
     );
-  }, [data]);
-
-  const averageAccuracy = useMemo(() => {
-    if (!data.length) return 0;
-    return Math.round(
-      data.reduce((total, item) => total + item.accuracy, 0) / data.length,
-    );
-  }, [data]);
-
-  const strongestSubject = useMemo(
-    () =>
-      subjectPerformance.reduce((best, current) =>
-        current.score > best.score ? current : best,
-      ),
-    [],
-  );
-
-  const weakestSubject = useMemo(
-    () =>
-      subjectPerformance.reduce((weakest, current) =>
-        current.score < weakest.score ? current : weakest,
-      ),
-    [],
-  );
+  }
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -125,7 +132,7 @@ export default function AnalyticsPage() {
           </h1>
         </div>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Track your learning performance over time.
+          Track your real database learning performance over time.
         </p>
       </div>
 
@@ -134,15 +141,15 @@ export default function AnalyticsPage() {
           <MiniStat
             icon={Target}
             label="Average score"
-            value={`${averageScore}%`}
+            value={`${avgScore}%`}
           />
         </Card>
 
         <Card className="p-4">
           <MiniStat
             icon={Percent}
-            label="Average accuracy"
-            value={`${averageAccuracy}%`}
+            label="Total Quiz Attempts"
+            value={totalAttempts}
             iconClassName="text-blue-600"
           />
         </Card>
@@ -158,164 +165,101 @@ export default function AnalyticsPage() {
       </div>
 
       <Card className="p-5">
-        <SectionHeading
-          title="Performance Trend"
-          right={
-            <div className="flex rounded-xl bg-slate-100 p-1 dark:bg-white/5">
-              {TREND_RANGES.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setRange(item)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                    range === item
-                      ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
-                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                  }`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          }
-        />
-
-        <div className="h-72 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopOpacity={0.25} />
-                  <stop offset="100%" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="label" axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} axisLine={false} tickLine={false} />
-              <Tooltip content={<ChartTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="score"
-                name="Score"
-                stroke="currentColor"
-                fill="url(#scoreGradient)"
-                className="text-purple-600"
-                strokeWidth={2.5}
-              />
-              <Area
-                type="monotone"
-                dataKey="accuracy"
-                name="Accuracy"
-                stroke="currentColor"
-                fill="none"
-                className="text-blue-500"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-
-      <div>
-        <Card className="p-5">
-          <SectionHeading title="Subject Performance" />
-
-          <div className="h-80 w-full">
+        <SectionHeading title="Performance Trend" />
+        {trendData.length === 0 ? (
+          <div className="p-8 text-center text-sm text-slate-500">
+            No quiz attempts recorded yet. Attempt a quiz to build your performance trend!
+          </div>
+        ) : (
+          <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={subjectPerformance}
-                layout="vertical"
-                margin={{ top: 0, right: 20, left: 20, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis
-                  type="number"
-                  domain={[0, 100]}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="subject"
-                  width={90}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11 }}
-                />
+              <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopOpacity={0.25} />
+                    <stop offset="100%" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 100]} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="score" name="Score" radius={[0, 6, 6, 0]}>
-                  {subjectPerformance.map((item) => (
-                    <Cell
-                      key={item.subject}
-                      fill={
-                        item.score < 50
-                          ? "#ef4444"
-                          : item.score < 70
-                            ? "#f59e0b"
-                            : "#8b5cf6"
-                      }
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
+                <Area
+                  type="monotone"
+                  dataKey="score"
+                  name="Score"
+                  stroke="currentColor"
+                  fill="url(#scoreGradient)"
+                  className="text-purple-600"
+                  strokeWidth={2.5}
+                />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
+        )}
+      </Card>
 
-          <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            <span>
-              Weakest subject:{" "}
-              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                {weakestSubject.subject}
-              </span>{" "}
-              ({weakestSubject.score}%)
-            </span>
+      <Card className="p-5">
+        <SectionHeading title="Subject Performance" />
+        {subjectPerformance.length === 0 ? (
+          <div className="p-8 text-center text-sm text-slate-500">
+            No learning space scores recorded yet. Create a Learning Space and take a quiz!
           </div>
-        </Card>
+        ) : (
+          <>
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={subjectPerformance}
+                  layout="vertical"
+                  margin={{ top: 0, right: 20, left: 20, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis
+                    type="number"
+                    domain={[0, 100]}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="subject"
+                    width={110}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar dataKey="score" name="Score" radius={[0, 6, 6, 0]}>
+                    {subjectPerformance.map((item) => (
+                      <Cell
+                        key={item.subject}
+                        fill={
+                          item.score < 50
+                            ? "#ef4444"
+                            : item.score < 70
+                              ? "#f59e0b"
+                              : "#8b5cf6"
+                        }
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
 
-        <Card className="p-5">
-          <SectionHeading title="Recent Quiz Activity" />
-
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {recentActivity.map((activity) => (
-              <div
-                key={`${activity.time}-${activity.title}`}
-                className="flex gap-4 py-4 first:pt-0 last:pb-0"
-              >
-                <div className="flex w-14 shrink-0 flex-col items-center">
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                    {activity.time}
-                  </span>
-                  <span className="mt-1 text-[10px] text-slate-400">
-                    {activity.day}
-                  </span>
-                </div>
-
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                    {activity.title}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {activity.meta}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      <Card className="flex items-start gap-3 p-4">
-        <BookMarked className="mt-0.5 h-5 w-5 shrink-0 text-purple-600" />
-        <div>
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">
-            Analytics is currently using mock data
-          </p>
-          <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-            The data layer is isolated so the future analytics API can replace
-            this source without changing the page structure.
-          </p>
-        </div>
+            <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <span>
+                Focus Area:{" "}
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  {weakestSubject.subject}
+                </span>{" "}
+                ({weakestSubject.score}% average)
+              </span>
+            </div>
+          </>
+        )}
       </Card>
     </div>
   );

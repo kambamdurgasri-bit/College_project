@@ -1,10 +1,47 @@
 import prisma from "../../lib/prisma.js";
 
-export function listForUser(userId) {
-  return prisma.learningSpaces.findMany({
+export async function listForUser(userId) {
+  const spaces = await prisma.learningSpaces.findMany({
     where: { userId },
-    include: { _count: { select: { quizzes: true } } },
+    include: {
+      quizzes: {
+        include: {
+          quizAttempts: {
+            where: { userId },
+            select: { score: true },
+          },
+        },
+      },
+    },
     orderBy: { id: "desc" },
+  });
+
+  return spaces.map((space) => {
+    const totalQuizzes = space.quizzes.length;
+    let totalScore = 0;
+    let totalAttempts = 0;
+
+    space.quizzes.forEach((q) => {
+      q.quizAttempts.forEach((att) => {
+        totalScore += att.score;
+        totalAttempts += 1;
+      });
+    });
+
+    const avgScore = totalAttempts > 0 ? Math.round(totalScore / totalAttempts) : 0;
+
+    return {
+      id: space.id,
+      name: space.name,
+      userId: space.userId,
+      colorId: "purple",
+      icon: "bot",
+      topicsTotal: totalQuizzes || 1,
+      topicsCompleted: totalQuizzes > 0 && avgScore >= 70 ? totalQuizzes : 0,
+      topicsInProgress: totalQuizzes > 0 && avgScore < 70 ? totalQuizzes : 0,
+      progress: avgScore,
+      status: avgScore >= 70 ? "Completed" : "In Progress",
+    };
   });
 }
 
@@ -14,21 +51,47 @@ export async function getOwned(userId, id) {
   return space;
 }
 
-export function create(userId, data) {
-  return prisma.learningSpaces.create({
+export async function create(userId, data) {
+  const space = await prisma.learningSpaces.create({
     data: {
       userId,
       name: data.name,
-      colorId: data.colorId ?? "purple",
-      icon: data.icon ?? "bot",
     },
   });
+
+  return {
+    id: space.id,
+    name: space.name,
+    userId: space.userId,
+    colorId: data.colorId || "purple",
+    icon: data.icon || "bot",
+    topicsTotal: 0,
+    topicsCompleted: 0,
+    topicsInProgress: 0,
+    progress: 0,
+    status: "In Progress",
+  };
 }
 
 export async function update(userId, id, data) {
   const existing = await getOwned(userId, id);
   if (!existing) return null;
-  return prisma.learningSpaces.update({ where: { id }, data });
+
+  const space = await prisma.learningSpaces.update({
+    where: { id },
+    data: {
+      ...(data.name && { name: data.name }),
+    },
+  });
+
+  return {
+    id: space.id,
+    name: space.name,
+    userId: space.userId,
+    colorId: data.colorId || "purple",
+    icon: data.icon || "bot",
+    status: "In Progress",
+  };
 }
 
 export async function remove(userId, id) {
@@ -67,7 +130,6 @@ export async function remove(userId, id) {
     });
   }
 
-  await prisma.progress.deleteMany({ where: { learningSpaceId: id } });
   await prisma.learningSpaces.delete({ where: { id } });
   return true;
 }
