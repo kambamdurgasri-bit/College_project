@@ -2,8 +2,10 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.routes.js';
-
-// Removed unused imports and middleware for a cleaner, unified app
+import dashboardRoutes from './modules/dashboard/dashboard.routes.js';
+import learningSpacesRoutes from './modules/learning-spaces/learningSpaces.routes.js';
+import timetableRoutes from './modules/timetable/timetable.routes.js';
+import quizRoutes from './modules/quiz/quiz.routes.js';
 
 const app = express();
 
@@ -19,6 +21,10 @@ app.use(cors({
 
 app.use(express.json());
 app.use('/api/auth', authRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/learning-spaces', learningSpacesRoutes);
+app.use('/api/timetable', timetableRoutes);
+app.use('/api/quizzes', quizRoutes);
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 

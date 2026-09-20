@@ -99,7 +99,7 @@ export async function listForLearningSpace(req, res, next) {
 
 export async function getForAttempt(req, res, next) {
   try {
-    const quiz = await service.getQuizForAttempt(req.user.id, Number(req.params.id));
+    const quiz = await service.getForAttempt(req.user.id, Number(req.params.id));
     if (!quiz) return res.status(404).json({ error: "Quiz not found." });
     res.json(quiz);
   } catch (err) {
@@ -124,7 +124,7 @@ export async function submitAttempt(req, res, next) {
 export async function history(req, res, next) {
   try {
     const limit = req.query.limit ? Number(req.query.limit) : undefined;
-    res.json(await service.historyForUser(req.user.id, { limit }));
+    res.json(await service.getHistory(req.user.id, limit));
   } catch (err) {
     next(err);
   }

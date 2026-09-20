@@ -5,7 +5,7 @@ import CreateLearningSpacePage from "../pages/LearningSpaces/CreateLearningSpace
 import EditLearningSpacePage from "../pages/LearningSpaces/EditLearningSpacePage";
 import LearningSpaceDetailsPage from "../pages/LearningSpaces/LearningSpaceDetailsPage";
 import TimetablePage from "../pages/Timetable/TimetablePage";
-import ComingSoonPage from "../pages/ComingSoonPage";
+import DashboardPage from "../pages/Dashboard/DashboardPage";
 import ProfilePage from "../pages/Profile/ProfilePage";
 import EditProfilePage from "../pages/Profile/EditProfilePage";
 import SettingsPage from "../pages/SettingsPage";
@@ -50,8 +50,10 @@ export default function AppRoutes() {
           element={<QuizPage key="quiz-history" initialScreen="history" />}
         />
 
+        {/* Module 2: Dashboard */}
+        <Route path="/dashboard" element={<DashboardPage />} />
+
         {/* Out-of-scope routes kept as placeholders so sidebar nav never 404s */}
-        <Route path="/dashboard" element={<ComingSoonPage title="Dashboard" />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/ai-recommendations" element={<AIRecommendationsPage />} />
 
