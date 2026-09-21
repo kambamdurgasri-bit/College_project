@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://your-backend-api.onrender.com/api/$1" },
+    { "source": "/api/(.*)", "destination": "https://college-project-4-gghl.onrender.com/" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
