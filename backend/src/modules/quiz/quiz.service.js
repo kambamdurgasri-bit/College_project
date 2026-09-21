@@ -1,17 +1,10 @@
 import prisma from "../../lib/prisma.js";
 import * as learningSpaces from "../learning-spaces/learningSpaces.service.js";
-import { GoogleGenAI } from "@google/genai";
+import * as topicsService from "../topics/topics.service.js";
+import * as resourcesService from "../resources/resources.service.js";
+import { generateText, parseJsonLoosely, AIUnavailableError } from "../../lib/ai.js";
 
-let ai = null;
-if (process.env.GEMINI_API_KEY) {
-  try {
-    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  } catch (err) {
-    console.warn("Could not initialize GoogleGenAI:", err.message);
-  }
-}
-
-// --- Quiz creation -----------------------------------------------------
+// --- Quiz creation -------------------------------------------------------
 
 export async function createQuiz(userId, { learningSpaceId, topic, difficulty, questions }) {
   const space = await learningSpaces.getOwned(userId, learningSpaceId);
@@ -35,173 +28,143 @@ export async function createQuiz(userId, { learningSpaceId, topic, difficulty, q
   });
 }
 
-// --- AI (Gemini) quiz generation & Fallback --------------------------------
+// --- AI quiz generation (OpenRouter primary, topic/resource aware) --------
 
-function generateFallbackQuestions(topic, difficulty, questionCount = 5) {
-  const count = Number(questionCount) || 5;
-  const safeTopic = topic || "General Concepts";
-  const templates = [
-    {
-      q: `What is a core fundamental of ${safeTopic}?`,
-      correct: `Key principles and core architecture of ${safeTopic}`,
-      options: [
-        `Key principles and core architecture of ${safeTopic}`,
-        `Legacy syntax deprecated in modern ${safeTopic}`,
-        `External network protocols unrelated to ${safeTopic}`,
-        `Hardware compilation flags for ${safeTopic}`,
-      ],
-    },
-    {
-      q: `Which option best describes an advantage of using ${safeTopic}?`,
-      correct: `Improved modularity, scalability, and code clarity`,
-      options: [
-        `Improved modularity, scalability, and code clarity`,
-        `Guaranteed zero execution latency`,
-        `Elimination of memory allocation requirements`,
-        `Complete replacement of database layers`,
-      ],
-    },
-    {
-      q: `What is considered a best practice when working with ${safeTopic}?`,
-      correct: `Maintaining clear structure, modularity, and error handling`,
-      options: [
-        `Ignoring error handling and logging`,
-        `Maintaining clear structure, modularity, and error handling`,
-        `Hardcoding configuration values directly`,
-        `Disabling type checking and validation`,
-      ],
-    },
-    {
-      q: `How does ${safeTopic} handle data structures and logic flow?`,
-      correct: `By breaking down tasks into reusable components and functions`,
-      options: [
-        `By executing synchronous blocking loops on main threads`,
-        `By storing all data in unindexed text files`,
-        `By breaking down tasks into reusable components and functions`,
-        `By bypassing system memory limits entirely`,
-      ],
-    },
-    {
-      q: `When optimizing performance in ${safeTopic}, what should be analyzed first?`,
-      correct: `Resource utilization, bottleneck identification, and execution speed`,
-      options: [
-        `Increasing system memory overhead`,
-        `Resource utilization, bottleneck identification, and execution speed`,
-        `Doubling the number of redundant network calls`,
-        `Removing unit tests and assertion checks`,
-      ],
-    },
-  ];
+async function generateAIQuestions({ topicName, topicDescription, difficulty, questionCount, resourceTexts = [] }) {
+  const resourceContext = resourceTexts.length > 0
+    ? "\n\nREFERENCE MATERIAL FROM ATTACHED RESOURCES:\n" + resourceTexts.map((t, i) => "[Resource " + (i + 1) + "]\n" + t).join("\n\n---\n\n")
+    : "";
 
-  const questions = [];
-  for (let i = 0; i < count; i++) {
-    const t = templates[i % templates.length];
-    questions.push({
-      questionText: `${t.q} (${difficulty} Level)`,
-      options: t.options,
-      correctAnswer: t.correct,
-    });
-  }
-  return questions;
+  const prompt = "You are an expert quiz creator for an educational platform called LearnTrack AI.\n\n"
+    + "Create exactly " + questionCount + " multiple-choice questions about \"" + topicName + "\""
+    + (topicDescription ? " (" + topicDescription + ")" : "") + " at " + difficulty + " difficulty level."
+    + resourceContext + "\n\n"
+    + "Requirements:\n"
+    + "- Each question must have exactly 4 options\n"
+    + "- Mark the correct answer clearly in correctAnswer field\n"
+    + "- Questions should test understanding, not just memorization\n"
+    + "- Difficulty level: " + difficulty + " (EASY/MEDIUM/HARD)\n"
+    + "- Base questions on the topic AND any reference material provided\n"
+    + "- Output ONLY valid JSON, no markdown fences, no prose, no explanations\n\n"
+    + "JSON format (exact):\n"
+    + "{" + '"' + "questions" + '"' + ": [{" + '"' + "questionText" + '"' + ": " + '"' + "Question here?" + '"' + ", " + '"' + "options" + '"' + ": [" + '"' + "Option A" + '"' + ", " + '"' + "Option B" + '"' + ", " + '"' + "Option C" + '"' + ", " + '"' + "Option D" + '"' + "], " + '"' + "correctAnswer" + '"' + ": " + '"' + "Correct option text" + '"' + "}]}";
+
+  const result = await generateText(prompt, { temperature: 0.5 });
+  return parseQuizJson(result.text, topicName, difficulty);
 }
 
-async function callGeminiWithRetry(prompt) {
-  if (!ai) {
-    throw new Error("Gemini API key is not configured.");
-  }
-  const models = ["gemini-2.5-flash", "gemini-1.5-flash"];
-  const maxAttemptsPerModel = 2;
-
-  for (const model of models) {
-    for (let attempt = 1; attempt <= maxAttemptsPerModel; attempt++) {
-      try {
-        const result = await ai.models.generateContent({ model, contents: prompt });
-        return result.text;
-      } catch (err) {
-        if (attempt === maxAttemptsPerModel) break;
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-    }
-  }
-
-  throw new Error("Gemini API service unavailable.");
-}
-
-async function generateQuestionsWithGemini({ topic, difficulty, notes, questionCount = 5 }) {
-  const source = notes
-    ? `Base the questions strictly on this content:\n"""${notes}"""`
-    : `Base the questions on the topic: "${topic}"`;
-
-  const prompt = `You are a quiz generator for a study app.
-${source}
-Difficulty level: ${difficulty}.
-
-Generate exactly ${questionCount} multiple-choice questions. Each question must have
-exactly 4 options, with exactly one correct answer that matches one of the options
-EXACTLY (same text, same casing).
-
-Respond with ONLY valid JSON (no markdown, no backticks, no extra text), in this exact shape:
-
-[
-  {
-    "questionText": "string",
-    "options": ["string", "string", "string", "string"],
-    "correctAnswer": "string (must exactly match one of the options)"
-  }
-]`;
-
-  const text = await callGeminiWithRetry(prompt);
-  const cleaned = text.replace(/```json|```/g, "").trim();
-
+function parseQuizJson(text, topicName, difficulty) {
   let questions;
   try {
-    questions = JSON.parse(cleaned);
-  } catch (err) {
-    throw new Error("Gemini returned invalid JSON");
-  }
-  if (!Array.isArray(questions) || questions.length === 0) {
-    throw new Error("Gemini returned no questions.");
+    const parsed = parseJsonLoosely(text);
+    if (parsed && Array.isArray(parsed)) {
+      questions = parsed;
+    } else if (parsed && parsed.questions && Array.isArray(parsed.questions)) {
+      questions = parsed.questions;
+    } else {
+      questions = null;
+    }
+  } catch {
+    questions = null;
   }
 
-  for (const q of questions) {
-    if (!Array.isArray(q.options) || q.options.length !== 4) {
-      throw new Error("Invalid options format");
-    }
-    if (!q.options.includes(q.correctAnswer)) {
-      throw new Error("Correct answer missing from options");
-    }
+  if (!questions || questions.length === 0) {
+    throw new AIUnavailableError(
+      "AI returned no usable questions for \"" + topicName + "\". Try again or use a different topic."
+    );
   }
 
-  return questions;
+  return questions.map((q) => ({
+    questionText: String(q.questionText || q.questionText || "").trim(),
+    options: Array.isArray(q.options) ? q.options.slice(0, 4) : [],
+    correctAnswer: String(q.correctAnswer || q.correctAnswer || "").trim(),
+  })).filter((q) => q.questionText && q.correctAnswer && q.options.length >= 2);
 }
 
-export async function createAIQuiz(userId, { learningSpaceId, topic, difficulty, notes, questionCount }) {
-  let questions;
-  try {
-    questions = await generateQuestionsWithGemini({ topic, difficulty, notes, questionCount });
-  } catch (err) {
-    console.warn("Gemini AI API call unavailable, generating dynamic quiz fallback:", err.message);
-    questions = generateFallbackQuestions(topic, difficulty, questionCount);
+export async function createAIQuizRecord(userId, { learningSpaceId, topic, difficulty, notes, questionCount, topicId, resourceIds }) {
+  const space = await learningSpaces.getOwned(userId, learningSpaceId);
+  if (!space) return null;
+
+  let topicName = topic;
+  let topicDescription = notes || "";
+  let resourceTexts = [];
+
+  if (topicId) {
+    const topicRecord = await topicsService.getOne(userId, topicId);
+    if (topicRecord) {
+      topicName = topicRecord.name;
+      topicDescription = topicRecord.description || topicDescription;
+    }
   }
-  return createQuiz(userId, { learningSpaceId, topic, difficulty, questions });
+
+  if (resourceIds && Array.isArray(resourceIds) && resourceIds.length > 0) {
+    const resources = await resourcesService.getMany(userId, resourceIds);
+    resourceTexts = resources
+      .filter((r) => r.extractedText)
+      .map((r) => r.extractedText);
+  }
+
+  const questions = await generateAIQuestions({
+    topicName,
+    topicDescription,
+    difficulty,
+    questionCount: questionCount || 5,
+    resourceTexts,
+  });
+
+  return prisma.quizzes.create({
+    data: {
+      learningSpaceId,
+      topic: topicName,
+      difficulty,
+      quizType: topicId ? "TOPIC" : "RESOURCE",
+      topicId: topicId || null,
+      resourceId: (resourceIds && resourceIds.length === 1) ? resourceIds[0] : null,
+      questions: {
+        create: questions.map((q) => ({
+          questionText: q.questionText,
+          correctAnswer: q.correctAnswer,
+          options: q.options ?? [],
+        })),
+      },
+    },
+    include: { questions: true },
+  });
 }
+
+// --- Reads ---------------------------------------------------------------
 
 export async function listForLearningSpace(userId, learningSpaceId) {
   const space = await learningSpaces.getOwned(userId, learningSpaceId);
   if (!space) return null;
-  return prisma.quizzes.findMany({
+
+  const quizzes = await prisma.quizzes.findMany({
     where: { learningSpaceId },
-    include: { _count: { select: { questions: true, quizAttempts: true } } },
+    include: { questions: true, topicRef: true, resource: true },
     orderBy: { id: "desc" },
   });
+
+  return quizzes.map((q) => ({
+    id: q.id,
+    topic: q.topic,
+    difficulty: q.difficulty,
+    quizType: q.quizType,
+    topicId: q.topicId,
+    resourceId: q.resourceId,
+    questionsCount: q.questions.length,
+    attemptsCount: 0,
+    latestScore: null,
+    bestScore: null,
+    lastAttemptAt: null,
+  }));
 }
 
-// Fetch a quiz for *attempting* — correct answers are stripped so they
-// never reach the client before submission.
+// --- Attempts & scoring --------------------------------------------------
+
 export async function getQuizForAttempt(userId, quizId) {
   const quiz = await prisma.quizzes.findUnique({
     where: { id: quizId },
-    include: { questions: true, learningSpace: true },
+    include: { questions: true, learningSpace: true, topicRef: true, resource: true },
   });
   if (!quiz || quiz.learningSpace.userId !== userId) return null;
   return {
@@ -209,6 +172,10 @@ export async function getQuizForAttempt(userId, quizId) {
     topic: quiz.topic,
     difficulty: quiz.difficulty,
     quizType: quiz.quizType,
+    learningSpaceId: quiz.learningSpaceId,
+    learningSpaceName: quiz.learningSpace.name,
+    topicId: quiz.topicId,
+    resourceId: quiz.resourceId,
     questions: quiz.questions.map((q) => ({
       questionId: q.questionId,
       questionText: q.questionText,
@@ -216,8 +183,6 @@ export async function getQuizForAttempt(userId, quizId) {
     })),
   };
 }
-
-// --- Attempts & scoring --------------------------------------------------
 
 export async function submitAttempt(userId, quizId, answers) {
   const quiz = await prisma.quizzes.findUnique({
@@ -305,11 +270,12 @@ export async function getAttemptReview(userId, quizAttemptId) {
   };
 }
 
-// --- History -------------------------------------------------------------
-
-export async function historyForUser(userId, { limit = 20 } = {}) {
+export async function historyForUser(userId, { limit = 20, learningSpaceId } = {}) {
   const attempts = await prisma.quizAttempts.findMany({
-    where: { userId },
+    where: {
+      userId,
+      ...(learningSpaceId ? { quiz: { learningSpaceId: Number(learningSpaceId) } } : {}),
+    },
     include: {
       quiz: { include: { learningSpace: true } },
       attemptAnswers: true,

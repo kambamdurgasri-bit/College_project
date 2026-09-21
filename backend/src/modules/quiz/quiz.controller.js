@@ -1,7 +1,12 @@
 import * as service from "./quiz.service.js";
+import { AIUnavailableError } from "../../lib/ai.js";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse");
+let pdfParse = null;
+async function loadPdfParse() {
+  if (!pdfParse) pdfParse = require("pdf-parse");
+  return pdfParse;
+}
 
 export async function create(req, res, next) {
   try {
@@ -33,28 +38,33 @@ export async function create(req, res, next) {
 
 export async function createAI(req, res, next) {
   try {
-    const { learningSpaceId, topic, difficulty, notes, questionCount } = req.body;
-    if (!learningSpaceId || !topic || !difficulty) {
-      return res.status(400).json({ error: "learningSpaceId, topic and difficulty are required." });
+    const { learningSpaceId, topic, difficulty, notes, questionCount, topicId, resourceIds } = req.body;
+    if (!learningSpaceId || !difficulty) {
+      return res.status(400).json({ error: "learningSpaceId and difficulty are required." });
     }
 
-    const quiz = await service.createAIQuiz(req.user.id, {
+    const quiz = await service.createAIQuizRecord(req.user.id, {
       learningSpaceId: Number(learningSpaceId),
-      topic,
+      topic: topic || "",
       difficulty,
       notes,
       questionCount,
+      topicId: topicId ? Number(topicId) : undefined,
+      resourceIds: resourceIds || undefined,
     });
     if (!quiz) return res.status(404).json({ error: "Learning space not found." });
     res.status(201).json(quiz);
   } catch (err) {
+    if (err instanceof AIUnavailableError) {
+      return res.status(503).json({ error: err.message });
+    }
     next(err);
   }
 }
 
 export async function createAIFromPdf(req, res, next) {
   try {
-    const { learningSpaceId, topic, difficulty, questionCount } = req.body;
+    const { learningSpaceId, topic, difficulty, questionCount, topicId } = req.body;
     if (!learningSpaceId || !difficulty) {
       return res.status(400).json({ error: "learningSpaceId and difficulty are required." });
     }
@@ -62,23 +72,28 @@ export async function createAIFromPdf(req, res, next) {
       return res.status(400).json({ error: "A PDF file is required." });
     }
 
-    const parsed = await pdfParse(req.file.buffer);
+    const pdfModule = await loadPdfParse();
+    const parsed = await pdfModule(req.file.buffer);
     const extractedText = parsed.text?.trim();
 
     if (!extractedText) {
       return res.status(400).json({ error: "Couldn't extract any text from that PDF." });
     }
 
-    const quiz = await service.createAIQuiz(req.user.id, {
+    const quiz = await service.createAIQuizRecord(req.user.id, {
       learningSpaceId: Number(learningSpaceId),
       topic: topic || req.file.originalname.replace(/\.pdf$/i, ""),
       difficulty,
       notes: extractedText,
       questionCount,
+      topicId: topicId ? Number(topicId) : undefined,
     });
     if (!quiz) return res.status(404).json({ error: "Learning space not found." });
     res.status(201).json(quiz);
   } catch (err) {
+    if (err instanceof AIUnavailableError) {
+      return res.status(503).json({ error: err.message });
+    }
     next(err);
   }
 }
@@ -124,7 +139,8 @@ export async function submitAttempt(req, res, next) {
 export async function history(req, res, next) {
   try {
     const limit = req.query.limit ? Number(req.query.limit) : undefined;
-    res.json(await service.historyForUser(req.user.id, { limit }));
+    const learningSpaceId = req.query.learningSpaceId ? Number(req.query.learningSpaceId) : undefined;
+    res.json(await service.historyForUser(req.user.id, { limit, learningSpaceId }));
   } catch (err) {
     next(err);
   }

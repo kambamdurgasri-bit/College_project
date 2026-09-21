@@ -9,6 +9,7 @@ model Users {
   progress        Progress[]
   quizAttempts    QuizAttempts[]
   recommendations Recommendations[]
+  resources       Resources[]
   timetables      Timetables[]
 
   @@map("users")

@@ -7,10 +7,28 @@ model LearningSpaces {
   user        Users        @relation(fields: [userId], references: [id])
   progress    Progress[]
   quizzes     Quizzes[]
+  topics      Topics[]
+  resources   Resources[]
   timetables  Timetables[] // schedules that reference this space
 
   @@index([userId])
   @@map("learning_spaces")
+}
+
+model Topics {
+  id              Int           @id @default(autoincrement())
+  learningSpaceId Int           @map("learning_space_id")
+  name            String        @db.VarChar(100) // kept <= quizzes.topic width so the mirror never truncates
+  description     String?       @db.Text
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  learningSpace   LearningSpaces @relation(fields: [learningSpaceId], references: [id])
+  quizzes         Quizzes[]
+  resources       Resources[]
+
+  @@unique([learningSpaceId, name])
+  @@index([learningSpaceId])
+  @@map("topics")
 }
 
 model Timetables {
@@ -32,14 +50,19 @@ model Timetables {
 model Quizzes {
   id              Int            @id @default(autoincrement())
   learningSpaceId Int            @map("learning_space_id")
-  topic           String         @db.VarChar(100)
+  topicId         Int?           @map("topic_id")
+  resourceId      Int?           @map("resource_id")
+  topic           String         @db.VarChar(100) // mirror of Topics.name (same pattern as timetables.subject)
   difficulty      String         @db.VarChar(20)
-  quizType        String         @default("TOPIC") @map("quiz_type") @db.VarChar(20)
+  quizType        String         @default("TOPIC") @map("quiz_type") @db.VarChar(20) // TOPIC | RESOURCE | PDF
   questions       Questions[]
   quizAttempts    QuizAttempts[]
   learningSpace   LearningSpaces @relation(fields: [learningSpaceId], references: [id])
+  topicRef        Topics?        @relation(fields: [topicId], references: [id])
+  resource        Resources?     @relation(fields: [resourceId], references: [id])
 
   @@index([learningSpaceId])
+  @@index([topicId])
   @@map("quizzes")
 }
 

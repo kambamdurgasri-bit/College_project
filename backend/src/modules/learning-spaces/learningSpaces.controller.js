@@ -28,7 +28,7 @@ export async function create(req, res, next) {
 
 export async function getOne(req, res, next) {
   try {
-    const space = await service.getOwned(req.user.id, Number(req.params.id));
+    const space = await service.getDetails(req.user.id, Number(req.params.id));
     if (!space) return res.status(404).json({ error: "Learning space not found." });
     res.json(space);
   } catch (err) {

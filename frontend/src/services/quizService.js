@@ -5,6 +5,18 @@ export const quizService = {
     return apiRequest(`/quizzes?learningSpaceId=${learningSpaceId}`, { method: "GET" }, []);
   },
 
+  async listTopics(learningSpaceId) {
+    return apiRequest(`/topics?learningSpaceId=${learningSpaceId}`, { method: "GET" }, []);
+  },
+
+  async createTopic({ learningSpaceId, name, description }) {
+    return apiRequest("/topics", {
+      method: "POST",
+      body: { learningSpaceId, name, description },
+    });
+    // No fallback value on purpose — creation errors must surface in the UI.
+  },
+
   async generate({ learningSpaceId, topic, difficulty, questionCount }) {
     return apiRequest("/quizzes/generate", {
       method: "POST",

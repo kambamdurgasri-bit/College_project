@@ -1,48 +1,144 @@
 import prisma from "../../lib/prisma.js";
+import { accuracyPercent, averageAccuracy } from "../../lib/score.js";
+import { decorateTopic, topicIncludeFor } from "../../lib/topicShape.js";
+import { removeStoredFile } from "../../lib/storage.js";
+import { resourceInclude, shapeResource } from "../../lib/resourceShape.js";
+
+// --- Shaping --------------------------------------------------------------
+
+// Every card / banner / tab in the UI reads from this shape, which is always
+// computed from real rows — no hardcoded colours, icons or topic counts.
+function shapeSpace(space, { includeTopics = false } = {}) {
+  const topics = (space.topics || []).map((topic) => decorateTopic(topic));
+
+  const attempts = (space.quizzes || []).flatMap((quiz) => {
+    const questionCount = quiz._count?.questions ?? 0;
+    return (quiz.quizAttempts || []).map((attempt) => ({
+      score: attempt.score,
+      questionCount,
+    }));
+  });
+
+  const completed = topics.filter((topic) => topic.status === "COMPLETED").length;
+  const inProgress = topics.filter((topic) => topic.status === "IN_PROGRESS").length;
+
+  const shaped = {
+    id: space.id,
+    userId: space.userId,
+    name: space.name,
+    colorId: space.colorId,
+    icon: space.icon,
+    topicsTotal: topics.length,
+    topicsCompleted: completed,
+    topicsInProgress: inProgress,
+    topicsNotStarted: topics.length - completed - inProgress,
+    quizzesCount: (space.quizzes || []).length,
+    resourcesCount: space._count?.resources ?? 0,
+    progress: averageAccuracy(attempts),
+    status:
+      topics.length > 0 && completed === topics.length ? "Completed" : "In Progress",
+  };
+
+  if (includeTopics) shaped.topics = topics;
+  return shaped;
+}
+
+const spaceInclude = (userId) => ({
+  topics: { include: topicIncludeFor(userId) },
+  quizzes: {
+    select: {
+      id: true,
+      topicId: true,
+      topic: true,
+      difficulty: true,
+      quizType: true,
+      _count: { select: { questions: true } },
+      quizAttempts: {
+        where: { userId },
+        select: { score: true, attemptedAt: true },
+      },
+    },
+  },
+  _count: { select: { resources: true } },
+});
+
+// --- Reads ----------------------------------------------------------------
 
 export async function listForUser(userId) {
   const spaces = await prisma.learningSpaces.findMany({
     where: { userId },
-    include: {
-      quizzes: {
-        include: {
-          quizAttempts: {
-            where: { userId },
-            select: { score: true },
-          },
-        },
-      },
-    },
+    include: spaceInclude(userId),
     orderBy: { id: "desc" },
   });
 
-  return spaces.map((space) => {
-    const totalQuizzes = space.quizzes.length;
-    let totalScore = 0;
-    let totalAttempts = 0;
+  return spaces.map((space) => shapeSpace(space));
+}
 
-    space.quizzes.forEach((q) => {
-      q.quizAttempts.forEach((att) => {
-        totalScore += att.score;
-        totalAttempts += 1;
-      });
-    });
-
-    const avgScore = totalAttempts > 0 ? Math.round(totalScore / totalAttempts) : 0;
-
-    return {
-      id: space.id,
-      name: space.name,
-      userId: space.userId,
-      colorId: "purple",
-      icon: "bot",
-      topicsTotal: totalQuizzes || 1,
-      topicsCompleted: totalQuizzes > 0 && avgScore >= 70 ? totalQuizzes : 0,
-      topicsInProgress: totalQuizzes > 0 && avgScore < 70 ? totalQuizzes : 0,
-      progress: avgScore,
-      status: avgScore >= 70 ? "Completed" : "In Progress",
-    };
+// Space overview used by the details page: real topics, quizzes, resources and
+// recent activity for this space only.
+export async function getDetails(userId, id) {
+  const space = await prisma.learningSpaces.findUnique({
+    where: { id },
+    include: spaceInclude(userId),
   });
+  if (!space || space.userId !== userId) return null;
+
+  const shaped = shapeSpace(space, { includeTopics: true });
+
+  const quizzes = (space.quizzes || [])
+    .map((quiz) => {
+      const questionCount = quiz._count?.questions ?? 0;
+      const attempts = [...(quiz.quizAttempts || [])].sort(
+        (a, b) => new Date(b.attemptedAt) - new Date(a.attemptedAt)
+      );
+      const scores = attempts.map((attempt) =>
+        accuracyPercent(attempt.score, questionCount)
+      );
+
+      return {
+        id: quiz.id,
+        topicId: quiz.topicId,
+        topic: quiz.topic,
+        difficulty: quiz.difficulty,
+        quizType: quiz.quizType,
+        questionsCount: questionCount,
+        attemptsCount: attempts.length,
+        latestScore: scores.length ? scores[0] : null,
+        bestScore: scores.length ? Math.max(...scores) : null,
+        lastAttemptAt: attempts.length ? attempts[0].attemptedAt : null,
+      };
+    })
+    .sort((a, b) => b.id - a.id);
+
+  const resources = await prisma.resources.findMany({
+    where: { learningSpaceId: id },
+    include: resourceInclude,
+    orderBy: { id: "desc" },
+  });
+
+  const activity = (space.quizzes || [])
+    .flatMap((quiz) => {
+      const questionCount = quiz._count?.questions ?? 0;
+      return (quiz.quizAttempts || []).map((attempt) => ({
+        quizId: quiz.id,
+        topic: quiz.topic,
+        topicId: quiz.topicId,
+        difficulty: quiz.difficulty,
+        questionsCount: questionCount,
+        score: accuracyPercent(attempt.score, questionCount),
+        correctAnswers: attempt.score,
+        attemptedAt: attempt.attemptedAt,
+      }));
+    })
+    .sort((a, b) => new Date(b.attemptedAt) - new Date(a.attemptedAt))
+    .slice(0, 20);
+
+  return {
+    ...shaped,
+    quizzes,
+    resources: resources.map(shapeResource),
+    activity,
+  };
 }
 
 export async function getOwned(userId, id) {
@@ -56,42 +152,30 @@ export async function create(userId, data) {
     data: {
       userId,
       name: data.name,
+      colorId: data.colorId || "purple",
+      icon: data.icon || "bot",
     },
   });
 
-  return {
-    id: space.id,
-    name: space.name,
-    userId: space.userId,
-    colorId: data.colorId || "purple",
-    icon: data.icon || "bot",
-    topicsTotal: 0,
-    topicsCompleted: 0,
-    topicsInProgress: 0,
-    progress: 0,
-    status: "In Progress",
-  };
+  // Read back through the shared shaper so the response carries the values that
+  // were actually persisted rather than echoing the request body.
+  return shapeSpace({ ...space, topics: [], quizzes: [], _count: { resources: 0 } });
 }
 
 export async function update(userId, id, data) {
   const existing = await getOwned(userId, id);
   if (!existing) return null;
 
-  const space = await prisma.learningSpaces.update({
+  await prisma.learningSpaces.update({
     where: { id },
     data: {
-      ...(data.name && { name: data.name }),
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.colorId !== undefined && { colorId: data.colorId }),
+      ...(data.icon !== undefined && { icon: data.icon }),
     },
   });
 
-  return {
-    id: space.id,
-    name: space.name,
-    userId: space.userId,
-    colorId: data.colorId || "purple",
-    icon: data.icon || "bot",
-    status: "In Progress",
-  };
+  return getDetails(userId, id);
 }
 
 export async function remove(userId, id) {
@@ -129,6 +213,16 @@ export async function remove(userId, id) {
       where: { learningSpaceId: id },
     });
   }
+
+  // Uploaded resources live on disk as well as in the database.
+  const resources = await prisma.resources.findMany({
+    where: { learningSpaceId: id },
+    select: { filePath: true },
+  });
+  await prisma.resources.deleteMany({ where: { learningSpaceId: id } });
+  await Promise.all(resources.map((resource) => removeStoredFile(resource.filePath)));
+
+  await prisma.topics.deleteMany({ where: { learningSpaceId: id } });
 
   await prisma.learningSpaces.delete({ where: { id } });
   return true;

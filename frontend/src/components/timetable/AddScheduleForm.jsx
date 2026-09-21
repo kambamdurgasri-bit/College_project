@@ -122,15 +122,15 @@ export default function AddScheduleForm({ onSubmit, onCancel, submitting, error 
             disabled={loadingSpaces || submitting}
             className="w-full rounded-xl border border-slate-200 bg-surface-input px-3.5 py-2.5 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-50 dark:border-slate-700 dark:bg-white/5 dark:text-slate-100"
           >
-            {loadingSpaces ? (
-              <option>Loading spaces…</option>
-            ) : (
+            <option value="" disabled>
+              {loadingSpaces ? "Loading spaces…" : "Select a learning space"}
+            </option>
+            {!loadingSpaces &&
               spaces.map((s) => (
                 <option key={s.id} value={String(s.id)}>
                   {s.name}
                 </option>
-              ))
-            )}
+              ))}
           </select>
         )}
       </div>

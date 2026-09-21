@@ -38,7 +38,7 @@ import { learningSpaceService } from "../../services/learningSpaceService";
 import { quizService } from "../../services/quizService";
 import { getTheme } from "../../utils/theme";
 
-const TABS = ["Overview", "Topics", "Resources", "Quizzes", "Activity"];
+const TABS = ["Overview", "Topics", "Resources", "Quiz History", "Activity"];
 
 const ACTIVITY_ICON = {
   completed: CheckCircle,
@@ -63,13 +63,25 @@ export default function LearningSpaceDetailsPage() {
   const [space, setSpace] = useState(null);
   const [activeTab, setActiveTab] = useState("Overview");
 
-  // Topic & Quiz Creation Modal state
-  const [showAddModal, setShowAddModal] = useState(false);
+  // Add-topic state (pure topic record — no quiz is created here)
+  const [showAddTopicModal, setShowAddTopicModal] = useState(false);
   const [topicName, setTopicName] = useState("");
+  const [topicDescription, setTopicDescription] = useState("");
+  const [creatingTopic, setCreatingTopic] = useState(false);
+  const [createError, setCreateError] = useState(null);
+
+  // Generate-quiz state (pick an existing topic + options, then call AI)
+  const [showQuizModal, setShowQuizModal] = useState(false);
+  const [quizTopicId, setQuizTopicId] = useState("");
   const [difficulty, setDifficulty] = useState("MEDIUM");
   const [questionCount, setQuestionCount] = useState(5);
   const [generating, setGenerating] = useState(false);
-  const [createError, setCreateError] = useState(null);
+  const [quizError, setQuizError] = useState(null);
+
+  // Quiz history for THIS space (real attempt rows, newest first)
+  const [quizHistory, setQuizHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
 
   // Resource Modal State
   const [showResourceModal, setShowResourceModal] = useState(false);

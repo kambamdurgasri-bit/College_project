@@ -2,6 +2,9 @@ node_modules/
 dist/
 .env
 
+# Uploaded study resources (PDF / images) — never committed
+uploads/
+
 # AI editor config folders
 .claude/
 .cursor/

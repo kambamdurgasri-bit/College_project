@@ -19,35 +19,39 @@ function formatTime(val) {
   return String(val);
 }
 
-function parseTimeToIso(timeStr) {
-  if (!timeStr) return "1970-01-01T09:00:00.000Z";
-  if (typeof timeStr === "string" && /^([01]\d|2[0-3]):([0-5]\d)$/.test(timeStr)) {
-    return `1970-01-01T${timeStr}:00.000Z`;
-  }
-  return String(timeStr);
+// DB columns start_time / end_time are VARCHAR(5) — store plain "HH:mm".
+function normalizeTime(timeStr) {
+  if (typeof timeStr !== "string") return null;
+  const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const hours = match[1].padStart(2, "0");
+  return `${hours}:${match[2]}`;
 }
 
+const timetableInclude = {
+  learningSpace: { select: { id: true, name: true, colorId: true, icon: true } },
+};
+
 function mapTimetableRecord(entry) {
-  const startTime = formatTime(entry.startTime);
-  const endTime = formatTime(entry.endTime);
+  const space = entry.learningSpace ?? null;
   return {
     id: entry.id,
     userId: entry.userId,
     day: entry.day,
-    subject: entry.subject,
-    startTime,
-    endTime,
-    learningSpace: {
-      id: entry.id,
-      name: entry.subject,
-      colorId: "purple",
-    },
+    subject: space?.name ?? entry.subject,
+    startTime: formatTime(entry.startTime),
+    endTime: formatTime(entry.endTime),
+    learningSpaceId: entry.learningSpaceId ?? null,
+    learningSpace: space
+      ? { id: space.id, name: space.name, colorId: space.colorId, icon: space.icon }
+      : null,
   };
 }
 
 export async function listForUser(userId) {
   const entries = await prisma.timetables.findMany({
     where: { userId },
+    include: timetableInclude,
     orderBy: [{ day: "asc" }, { startTime: "asc" }],
   });
   return entries.map(mapTimetableRecord);
@@ -56,6 +60,7 @@ export async function listForUser(userId) {
 export async function listForToday(userId) {
   const entries = await prisma.timetables.findMany({
     where: { userId, day: todayName() },
+    include: timetableInclude,
     orderBy: { startTime: "asc" },
   });
   return entries.map(mapTimetableRecord);
@@ -67,27 +72,51 @@ export async function getOwned(userId, id) {
   return entry;
 }
 
-export async function create(userId, data) {
-  let subjectName = data.subject || data.name;
-
-  if (!subjectName && data.learningSpaceId) {
+async function resolveSubject(data) {
+  if (data.subject && String(data.subject).trim()) {
+    return String(data.subject).trim();
+  }
+  if (data.learningSpaceId) {
     const space = await prisma.learningSpaces.findUnique({
       where: { id: Number(data.learningSpaceId) },
       select: { name: true },
     });
-    if (space) subjectName = space.name;
+    if (space) return space.name;
+  }
+  return null;
+}
+
+export async function create(userId, data) {
+  // Normalize learningSpaceId once up-front: the frontend sends a Number, but
+  // it can also arrive as a numeric string (or ""). An empty string must map
+  // to undefined — passing "" into the DB write / JSON body is what produced
+  // the `"gSpaceId":,"day"` "not valid JSON" 400 from body-parser.
+  const rawSpaceId = data?.learningSpaceId;
+  const spaceId =
+    rawSpaceId === undefined || rawSpaceId === null || rawSpaceId === ""
+      ? undefined
+      : Number(rawSpaceId);
+  if (spaceId !== undefined && (!Number.isInteger(spaceId) || spaceId <= 0)) {
+    return null;
   }
 
-  if (!subjectName) subjectName = "General Subject";
+  const payload = { ...data, learningSpaceId: spaceId };
+  const subject = await resolveSubject(payload);
+  if (!subject) return null;
+
+  const startTime = normalizeTime(payload.startTime) ?? "09:00";
+  const endTime = normalizeTime(payload.endTime) ?? "10:00";
 
   const entry = await prisma.timetables.create({
     data: {
       userId,
-      day: data.day,
-      subject: subjectName,
-      startTime: parseTimeToIso(data.startTime),
-      endTime: parseTimeToIso(data.endTime),
+      day: payload.day,
+      subject,
+      startTime,
+      endTime,
+      ...(spaceId !== undefined ? { learningSpaceId: spaceId } : {}),
     },
+    include: timetableInclude,
   });
 
   return mapTimetableRecord(entry);
@@ -97,23 +126,24 @@ export async function update(userId, id, data) {
   const existing = await getOwned(userId, id);
   if (!existing) return null;
 
-  let subjectName = data.subject || data.name;
-  if (!subjectName && data.learningSpaceId) {
-    const space = await prisma.learningSpaces.findUnique({
-      where: { id: Number(data.learningSpaceId) },
-      select: { name: true },
-    });
-    if (space) subjectName = space.name;
-  }
+  const subject = await resolveSubject(data);
+  const startTime = data.startTime ? normalizeTime(data.startTime) : undefined;
+  const endTime = data.endTime ? normalizeTime(data.endTime) : undefined;
 
   const updated = await prisma.timetables.update({
     where: { id },
     data: {
-      ...(subjectName && { subject: subjectName }),
+      ...(subject && { subject }),
       ...(data.day && { day: data.day }),
-      ...(data.startTime && { startTime: parseTimeToIso(data.startTime) }),
-      ...(data.endTime && { endTime: parseTimeToIso(data.endTime) }),
+      ...(startTime && { startTime }),
+      ...(endTime && { endTime }),
+      ...(data.learningSpaceId !== undefined && {
+        learningSpaceId: data.learningSpaceId
+          ? Number(data.learningSpaceId)
+          : null,
+      }),
     },
+    include: timetableInclude,
   });
 
   return mapTimetableRecord(updated);
