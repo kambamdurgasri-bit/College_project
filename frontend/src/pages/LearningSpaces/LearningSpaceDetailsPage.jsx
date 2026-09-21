@@ -38,7 +38,7 @@ import { learningSpaceService } from "../../services/learningSpaceService";
 import { quizService } from "../../services/quizService";
 import { getTheme } from "../../utils/theme";
 
-const TABS = ["Overview", "Topics", "Resources", "Quiz History", "Activity"];
+const TABS = ["Overview", "Topics", "Resources", "Quiz History"];
 
 const ACTIVITY_ICON = {
   completed: CheckCircle,
@@ -504,11 +504,11 @@ export default function LearningSpaceDetailsPage() {
         </div>
       )}
 
-      {/* Activity / Quiz History Tab */}
-      {(activeTab === "Activity" || activeTab === "Quiz History") && (
+      {/* Quiz History Tab */}
+      {activeTab === "Quiz History" && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card">
           <h3 className="mb-4 text-base font-semibold text-slate-900 dark:text-white">
-            Quiz Attempt Activity
+            Quiz History
           </h3>
           {quizzes.filter((q) => q.attemptsCount > 0).length === 0 ? (
             <p className="p-8 text-center text-sm text-slate-500">

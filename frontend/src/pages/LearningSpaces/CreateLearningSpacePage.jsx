@@ -11,8 +11,6 @@ export default function CreateLearningSpacePage() {
   const handleSubmit = async (values) => {
     setSubmitting(true);
     try {
-      // TODO: once the backend is ready, learningSpaceService.create will
-      // POST to /api/learning-spaces instead of resolving mock data.
       await learningSpaceService.create(values);
       navigate("/learning-spaces");
     } finally {
