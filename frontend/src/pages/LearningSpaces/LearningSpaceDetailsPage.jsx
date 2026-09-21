@@ -102,7 +102,7 @@ export default function LearningSpaceDetailsPage() {
         if (storedRes) {
           try {
             localRes = JSON.parse(storedRes);
-          } catch {}
+          } catch { }
         }
         const apiRes = data.resources || [];
         const merged = [...apiRes];
@@ -253,8 +253,7 @@ export default function LearningSpaceDetailsPage() {
             onClick={() => setShowAddModal(true)}
             className="flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
           >
-            <Plus className="h-3.5 w-3.5" /> Add Topic & AI Quiz
-          </button>
+            <Plus className="h-3.5 w-3.5" /> Add Topic          </button>
         </div>
       </div>
 
@@ -288,11 +287,10 @@ export default function LearningSpaceDetailsPage() {
             key={tab}
             type="button"
             onClick={() => setActiveTab(tab)}
-            className={`shrink-0 border-b-2 pb-3 text-sm font-medium transition-colors ${
-              activeTab === tab
-                ? "border-brand-600 text-brand-600 dark:text-brand-400"
-                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-            }`}
+            className={`shrink-0 border-b-2 pb-3 text-sm font-medium transition-colors ${activeTab === tab
+              ? "border-brand-600 text-brand-600 dark:text-brand-400"
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
           >
             {tab} {tab === "Topics" || tab === "Quizzes" ? `(${quizzes.length})` : tab === "Resources" ? `(${resources.length})` : ""}
           </button>
@@ -389,8 +387,7 @@ export default function LearningSpaceDetailsPage() {
                 onClick={() => setShowAddModal(true)}
                 className="mt-4 flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
               >
-                <Plus className="h-4 w-4" /> Add Topic & AI Quiz
-              </button>
+                <Plus className="h-4 w-4" /> Add Topic              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -616,7 +613,7 @@ export default function LearningSpaceDetailsPage() {
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" /> Create AI Topic Quiz
+                  <Sparkles className="h-4 w-4" /> Create Topic
                 </>
               )}
             </button>
