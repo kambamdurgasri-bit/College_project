@@ -64,7 +64,7 @@ export default function LearningSpaceDetailsPage() {
   const [activeTab, setActiveTab] = useState("Overview");
 
   // Add-topic state (pure topic record — no quiz is created here)
-  const [showAddTopicModal, setShowAddTopicModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [topicName, setTopicName] = useState("");
   const [topicDescription, setTopicDescription] = useState("");
   const [creatingTopic, setCreatingTopic] = useState(false);
@@ -97,6 +97,21 @@ export default function LearningSpaceDetailsPage() {
         setStatus("not-found");
       } else {
         setSpace(data);
+        const storedRes = localStorage.getItem(`resources_space_${id}`);
+        let localRes = [];
+        if (storedRes) {
+          try {
+            localRes = JSON.parse(storedRes);
+          } catch {}
+        }
+        const apiRes = data.resources || [];
+        const merged = [...apiRes];
+        for (const item of localRes) {
+          if (!merged.some((r) => r.id === item.id)) {
+            merged.push(item);
+          }
+        }
+        setResources(merged);
         setStatus("success");
       }
     } catch {
@@ -106,14 +121,6 @@ export default function LearningSpaceDetailsPage() {
 
   useEffect(() => {
     fetchSpaceDetails();
-    const storedRes = localStorage.getItem(`resources_space_${id}`);
-    if (storedRes) {
-      try {
-        setResources(JSON.parse(storedRes));
-      } catch {
-        setResources([]);
-      }
-    }
   }, [id]);
 
   const handleCreateTopicQuiz = async (e) => {
@@ -500,8 +507,8 @@ export default function LearningSpaceDetailsPage() {
         </div>
       )}
 
-      {/* Activity Tab */}
-      {activeTab === "Activity" && (
+      {/* Activity / Quiz History Tab */}
+      {(activeTab === "Activity" || activeTab === "Quiz History") && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card dark:border-slate-800/80 dark:bg-surface-dark-card">
           <h3 className="mb-4 text-base font-semibold text-slate-900 dark:text-white">
             Quiz Attempt Activity

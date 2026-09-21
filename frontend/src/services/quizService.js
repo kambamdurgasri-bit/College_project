@@ -17,10 +17,10 @@ export const quizService = {
     // No fallback value on purpose — creation errors must surface in the UI.
   },
 
-  async generate({ learningSpaceId, topic, difficulty, questionCount }) {
+  async generate({ learningSpaceId, topic, difficulty, questionCount, notes }) {
     return apiRequest("/quizzes/generate", {
       method: "POST",
-      body: { learningSpaceId, topic, difficulty, questionCount },
+      body: { learningSpaceId, topic, difficulty, questionCount, notes },
     });
     // No fallback value on purpose — if generation fails, show a real error
     // instead of silently pretending a quiz was created.
