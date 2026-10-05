@@ -348,7 +348,7 @@ export default function LearningSpaceDetailsPage() {
                 Topics Summary
               </h3>
               {quizzes.length === 0 ? (
-                <div className="p-4 text-center text-xs text-slate-400">
+                <div className="p-4 text-center text-xs text-slate-400 dark:text-slate-400">
                   No topics added yet. Click "+ Add Topic & AI Quiz" above to add your first topic!
                 </div>
               ) : (
@@ -358,7 +358,7 @@ export default function LearningSpaceDetailsPage() {
                       <span className="font-medium text-slate-700 dark:text-slate-200 truncate max-w-[150px]">
                         {q.topic}
                       </span>
-                      <span className="text-slate-500">
+                      <span className="text-slate-500 dark:text-slate-400">
                         {q.latestScore !== null ? `${q.latestScore}% Avg` : "Not Attempted"}
                       </span>
                     </li>
@@ -511,7 +511,7 @@ export default function LearningSpaceDetailsPage() {
             Quiz History
           </h3>
           {quizzes.filter((q) => q.attemptsCount > 0).length === 0 ? (
-            <p className="p-8 text-center text-sm text-slate-500">
+            <p className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
               No quiz attempts recorded yet. Click "Take Quiz" on any topic to start practicing!
             </p>
           ) : (
@@ -522,7 +522,7 @@ export default function LearningSpaceDetailsPage() {
                   <div key={q.id} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 dark:bg-white/5">
                     <div>
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{q.topic}</p>
-                      <p className="text-xs text-slate-500">{q.attemptsCount} attempt(s) total</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{q.attemptsCount} attempt(s) total</p>
                     </div>
                     <span className="text-sm font-bold text-brand-600 dark:text-brand-400">
                       {q.latestScore}% Latest

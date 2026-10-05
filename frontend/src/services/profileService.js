@@ -5,17 +5,17 @@ const PROFILE_STORAGE_KEY = "learntrack-profile";
 const PREFERENCES_STORAGE_KEY = "learntrack-preferences";
 
 const defaultProfile = {
-  fullName: "User",
-  email: "user@example.com",
-  phone: "Not provided",
-  dob: "2000-01-01",
-  gender: "Not Specified",
-  university: "State University",
+  fullName: "Tyone",
+  email: "tyone@learntrack.ai",
+  phone: "555-019-8372",
+  dob: "2001-05-22",
+  gender: "Male",
+  university: "Stanford University",
   branch: "Computer Science",
-  department: "Computer Science & Engineering",
-  learningLevel: "Intermediate",
-  about: "Active learner tracking progress on LearnTrack AI.",
-  avatar: "https://api.dicebear.com/7.x/notionists/svg?seed=User&backgroundColor=F4F2FF",
+  department: "Senior Year, Undergrad",
+  learningLevel: "Advanced",
+  about: "I'm a senior CS major passionate about Artificial Intelligence and Full-Stack Engineering. Currently building scalable web applications and researching neural network optimizations.",
+  avatar: "https://api.dicebear.com/7.x/notionists/svg?seed=Tyone&backgroundColor=F4F2FF",
 };
 
 const defaultPreferences = {

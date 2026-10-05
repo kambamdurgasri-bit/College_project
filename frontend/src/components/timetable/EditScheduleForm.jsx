@@ -183,7 +183,7 @@ export default function EditScheduleForm({
 
         {noSpaces ? (
           <div className="flex items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-2.5 dark:border-slate-700 dark:bg-white/5">
-            <BookOpen className="h-4 w-4 shrink-0 text-slate-400" />
+            <BookOpen className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-400" />
             <p className="text-sm text-slate-500 dark:text-slate-400">
               No Learning Spaces available.
             </p>

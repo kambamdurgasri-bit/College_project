@@ -178,6 +178,41 @@ export async function generateText(prompt, options = {}) {
     temperature: options.temperature ?? 0.4,
   };
 
+  // If the user hasn't configured a real API key, return a mock quiz!
+  if (process.env.OPENROUTERAI_API === "sk-or-v1-replace-me" && !process.env.GEMINI_API_KEY) {
+    console.warn("Using mock AI because no API key is configured.");
+    return {
+      text: JSON.stringify([
+        {
+          questionText: "What is the capital of France?",
+          options: ["London", "Berlin", "Paris", "Madrid"],
+          correctAnswer: "Paris"
+        },
+        {
+          questionText: "Which programming language is this backend built in?",
+          options: ["Python", "JavaScript/Node.js", "Java", "Ruby"],
+          correctAnswer: "JavaScript/Node.js"
+        },
+        {
+          questionText: "What does SQL stand for?",
+          options: ["Structured Query Language", "Strong Question Language", "Structured Question Loop", "System Query Logic"],
+          correctAnswer: "Structured Query Language"
+        },
+        {
+          questionText: "Which HTTP method is typically used to create a new resource?",
+          options: ["GET", "POST", "PUT", "DELETE"],
+          correctAnswer: "POST"
+        },
+        {
+          questionText: "What is 2 + 2?",
+          options: ["3", "4", "5", "6"],
+          correctAnswer: "4"
+        }
+      ]),
+      model: "mock-ai"
+    };
+  }
+
   const fromOpenRouter = await callOpenRouter(prompt, settings);
   if (fromOpenRouter) return fromOpenRouter;
 

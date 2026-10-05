@@ -9,6 +9,13 @@ export async function getProfile(userId) {
       name: true,
       email: true,
       phoneNumber: true,
+      dob: true,
+      gender: true,
+      university: true,
+      branch: true,
+      department: true,
+      about: true,
+      avatar: true,
     },
   });
 
@@ -89,15 +96,15 @@ export async function getProfile(userId) {
   return {
     ...user,
     fullName: user.name,
-    phone: user.phoneNumber || "Not provided",
-    dob: "2002-05-15",
-    gender: "Not Specified",
-    university: "State University",
-    branch: "Computer Science & Engineering",
-    department: "B.Tech, CSE",
+    phone: user.phoneNumber || "",
+    dob: user.dob || "",
+    gender: user.gender || "Not Specified",
+    university: user.university || "",
+    branch: user.branch || "",
+    department: user.department || "",
     learningLevel: "Intermediate",
-    about: "Dedicated student tracking learning progress dynamically on LearnTrack AI.",
-    avatar: `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(user.name)}&backgroundColor=F4F2FF`,
+    about: user.about || "",
+    avatar: user.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(user.name)}&backgroundColor=F4F2FF`,
     quickStats,
     achievements,
     activityTimeline,
@@ -105,7 +112,11 @@ export async function getProfile(userId) {
 }
 
 export async function updateProfile(userId, data) {
-  const { fullName, name, phone, phoneNumber } = data;
+  const { 
+    fullName, name, phone, phoneNumber, 
+    dob, gender, university, branch, department, about, avatar 
+  } = data;
+  
   const newName = fullName || name;
   const newPhone = phone !== undefined ? phone : phoneNumber;
 
@@ -114,13 +125,15 @@ export async function updateProfile(userId, data) {
     data: {
       ...(newName && { name: newName }),
       ...(newPhone !== undefined && { phoneNumber: newPhone }),
+      ...(dob !== undefined && { dob }),
+      ...(gender !== undefined && { gender }),
+      ...(university !== undefined && { university }),
+      ...(branch !== undefined && { branch }),
+      ...(department !== undefined && { department }),
+      ...(about !== undefined && { about }),
+      ...(avatar !== undefined && { avatar }),
     },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phoneNumber: true,
-    },
+    select: { id: true },
   });
 
   return getProfile(updatedUser.id);

@@ -4,6 +4,16 @@ model Users {
   email           String            @unique @db.VarChar(255)
   passwordHash    String            @map("password_hash") @db.VarChar(255)
   phoneNumber     String?           @map("phone_number") @db.VarChar(20)
+  
+  // Profile fields
+  dob             String?           @db.VarChar(20)
+  gender          String?           @db.VarChar(30)
+  university      String?           @db.VarChar(160)
+  branch          String?           @db.VarChar(160)
+  department      String?           @db.VarChar(160)
+  about           String?           @db.Text
+  avatar          String?           @db.Text
+
   learningSpaces  LearningSpaces[]
   passwordResets  PasswordResets[]
   progress        Progress[]

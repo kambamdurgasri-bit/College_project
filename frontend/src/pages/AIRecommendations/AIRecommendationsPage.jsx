@@ -97,15 +97,15 @@ export default function AIRecommendationsPage() {
           <h2 className="text-base font-semibold text-slate-900 dark:text-white">
             Recommended Actions
           </h2>
-          <span className="text-xs text-slate-400">Live AI Suggestions</span>
+          <span className="text-xs text-slate-400 dark:text-slate-400">Live AI Suggestions</span>
         </div>
 
         {loading ? (
-          <div className="p-8 text-center text-sm text-slate-500">
+          <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
             Analyzing quiz attempts & schedule...
           </div>
         ) : suggestions.length === 0 ? (
-          <p className="text-sm text-slate-500">No suggestions available yet. Take a quiz to get recommendations!</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">No suggestions available yet. Take a quiz to get recommendations!</p>
         ) : (
           <div className="space-y-4">
             {suggestions.map((item, idx) => (
@@ -142,7 +142,7 @@ export default function AIRecommendationsPage() {
             <h2 className="text-base font-semibold text-slate-900 dark:text-white">
               Weak Topics (&lt; 70% Avg)
             </h2>
-            <span className="text-xs text-slate-400">Needs attention</span>
+            <span className="text-xs text-slate-400 dark:text-slate-400">Needs attention</span>
           </div>
 
           {weakTopics.length === 0 ? (
@@ -190,7 +190,7 @@ export default function AIRecommendationsPage() {
             </h2>
           </div>
           {strongTopics.length === 0 ? (
-            <p className="p-4 text-sm text-slate-500">Take more quizzes to build your strong topics list.</p>
+            <p className="p-4 text-sm text-slate-500 dark:text-slate-400">Take more quizzes to build your strong topics list.</p>
           ) : (
             <div className="space-y-3">
               {strongTopics.map((topic, index) => (

@@ -67,7 +67,7 @@ export default function ScheduleCard({ event, style, onEdit, onDelete }) {
               e.preventDefault();
               setMenuOpen((prev) => !prev);
             }}
-            className="rounded p-0.5 text-slate-500 hover:bg-black/10 hover:text-slate-800 dark:hover:bg-white/20"
+            className="rounded p-0.5 text-slate-500 hover:bg-black/10 hover:text-slate-800 dark:text-white dark:hover:bg-white/20"
             title="Options"
           >
             <MoreVertical className="h-3.5 w-3.5" />

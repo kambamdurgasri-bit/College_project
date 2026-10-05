@@ -25,7 +25,7 @@ export default function Dialog({ open, onClose, title, description, children }) 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5"
+            className="rounded-lg p-1.5 text-slate-400 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5"
             aria-label="Close dialog"
           >
             <X className="h-4 w-4" />

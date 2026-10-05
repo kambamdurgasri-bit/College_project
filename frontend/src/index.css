@@ -9,6 +9,38 @@
   body {
     @apply bg-surface dark:bg-surface-dark text-slate-900 dark:text-slate-100 antialiased;
   }
+
+  :root {
+    --quiz-ink: #1E293B;
+    --quiz-sub: #64748B;
+    --quiz-line: #E4E4EC;
+    --quiz-purple: #7C3AED;
+    --quiz-purple-soft: #F5F3FF;
+    --quiz-purple-dark: #6D28D9;
+    --quiz-orange: #F97316;
+    --quiz-orange-soft: #FFF7ED;
+    --quiz-green: #10B981;
+    --quiz-green-soft: #F0FDF4;
+    --quiz-red: #EF4444;
+    --quiz-red-soft: #FEF2F2;
+    --quiz-white: #FCFCFE;
+  }
+
+  .dark {
+    --quiz-ink: #F8FAFC;
+    --quiz-sub: #94A3B8;
+    --quiz-line: rgba(30, 41, 59, 0.8);
+    --quiz-purple: #8B5CF6;
+    --quiz-purple-soft: rgba(255, 255, 255, 0.05);
+    --quiz-purple-dark: #A78BFA;
+    --quiz-orange: #FB923C;
+    --quiz-orange-soft: rgba(249, 115, 22, 0.1);
+    --quiz-green: #34D399;
+    --quiz-green-soft: rgba(16, 185, 129, 0.1);
+    --quiz-red: #F87171;
+    --quiz-red-soft: rgba(239, 68, 68, 0.1);
+    --quiz-white: #1B1B29;
+  }
 }
 
 @layer utilities {

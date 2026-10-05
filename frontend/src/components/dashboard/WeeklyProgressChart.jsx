@@ -51,18 +51,18 @@ export default function WeeklyProgressChart({ weeklyData }) {
 
         <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-white/5 dark:text-slate-300">
           <span>This Week</span>
-          <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+          <ChevronDown className="h-3.5 w-3.5 text-slate-400 dark:text-slate-400" />
         </div>
       </div>
 
       <div className="relative h-72 w-full">
         {!hasData && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl bg-white/70 backdrop-blur-[1px] dark:bg-slate-900/70">
-            <BarChart2 className="mb-2 h-8 w-8 text-slate-400" />
+            <BarChart2 className="mb-2 h-8 w-8 text-slate-400 dark:text-slate-400" />
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               No weekly data available yet
             </p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-400 dark:text-slate-400">
               Complete quizzes or study sessions to view daily progress trends.
             </p>
           </div>
