@@ -17,9 +17,9 @@ export default function ForgotPasswordPage() {
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
   
-  // 'email', 'otp', 'success'
   const [step, setStep] = useState("email"); 
   const [submitting, setSubmitting] = useState(false);
+  const [slowRequest, setSlowRequest] = useState(false);
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
@@ -29,6 +29,8 @@ export default function ForgotPasswordPage() {
     }
     setError("");
     setSubmitting(true);
+    setSlowRequest(false);
+    const slowTimer = setTimeout(() => setSlowRequest(true), 4000);
     try {
       await apiRequest("/auth/forgot-password", {
         method: "POST",
@@ -36,8 +38,10 @@ export default function ForgotPasswordPage() {
       });
       setStep("otp");
     } catch (err) {
-      setError(err.message || "Failed to send OTP.");
+      setError(err.message || "Failed to send OTP. Please try again.");
     } finally {
+      clearTimeout(slowTimer);
+      setSlowRequest(false);
       setSubmitting(false);
     }
   };
@@ -167,8 +171,13 @@ export default function ForgotPasswordPage() {
           />
 
           <PrimaryButton type="submit" disabled={submitting}>
-            Send OTP <ArrowRight size={15} />
+            {submitting ? "Sending..." : <>Send OTP <ArrowRight size={15} /></>}
           </PrimaryButton>
+          {slowRequest && (
+            <p className="mt-3 text-center text-xs text-slate-400">
+              ⏳ Server is waking up, please wait a moment…
+            </p>
+          )}
         </form>
       )}
     </AuthShell>
