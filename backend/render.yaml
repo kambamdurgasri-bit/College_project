@@ -3,5 +3,5 @@ services:
     name: college-project-backend
     env: node
     rootDir: backend
-    buildCommand: npm install && npx prisma generate
+    buildCommand: npm install --foreground-scripts && npx --yes prisma generate
     startCommand: npm start
