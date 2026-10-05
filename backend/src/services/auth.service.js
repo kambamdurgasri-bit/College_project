@@ -67,8 +67,29 @@ export function verifyToken(token) {
   return jwt.verify(token, getJwtSecret());
 }
 
+const OTP_POOL = [
+  "123456", "234567", "345678", "456789", "567890",
+  "678901", "789012", "890123", "901234", "192837",
+  "564738", "102938", "475869", "586970", "697081",
+  "708192", "819203", "920314", "031425", "142536"
+];
+
 export async function createPasswordResetToken(userId) {
-  const token = crypto.randomBytes(32).toString("hex");
+  let token;
+  let isUnique = false;
+  
+  while (!isUnique) {
+    // Pick randomly from the 20 predefined 6-digit OTPs
+    const randomIndex = Math.floor(Math.random() * OTP_POOL.length);
+    token = OTP_POOL[randomIndex];
+    
+    const existing = await prisma.passwordResets.findUnique({
+      where: { token },
+    });
+    if (!existing) {
+      isUnique = true;
+    }
+  }
 
   const expiresAt = new Date(
     Date.now() + RESET_TOKEN_TTL_MS

@@ -146,7 +146,7 @@ export default function LearningSpacesPage() {
 
       {status === "success" && filteredSpaces.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center dark:border-slate-700 dark:bg-surface-dark-card">
-          <FolderPlus className="mb-3 h-8 w-8 text-slate-400" />
+          <FolderPlus className="mb-3 h-8 w-8 text-slate-400 dark:text-slate-400" />
           <p className="font-medium text-slate-700 dark:text-slate-200">
             No learning spaces found
           </p>

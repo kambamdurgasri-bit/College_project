@@ -106,7 +106,7 @@ export default function AddScheduleForm({ onSubmit, onCancel, submitting, error 
 
         {noSpaces ? (
           <div className="flex items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-white/5">
-            <BookOpen className="h-4 w-4 shrink-0 text-slate-400" />
+            <BookOpen className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-400" />
             <p className="text-sm text-slate-500 dark:text-slate-400">
               No Learning Spaces yet.{" "}
               <a href="/learning-spaces/new" className="font-medium text-brand-600 underline underline-offset-2 hover:text-brand-700 dark:text-brand-400">

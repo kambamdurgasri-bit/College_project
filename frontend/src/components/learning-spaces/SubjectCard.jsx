@@ -38,7 +38,7 @@ export default function SubjectCard({ space, onDelete }) {
               e.stopPropagation();
               setMenuOpen((v) => !v);
             }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/5 dark:hover:text-slate-300"
+            className="rounded-lg p-1.5 text-slate-400 dark:text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-300"
             aria-label="Space options"
           >
             <MoreVertical className="h-4 w-4" />

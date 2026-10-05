@@ -98,17 +98,16 @@ export async function forgotPassword(req, res) {
     // Always return the same response, whether or not the email exists —
     // this prevents attackers from using this endpoint to discover which emails are registered.
     if (user) {
-      const token = await createPasswordResetToken(user.id);
-      const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+      const otp = await createPasswordResetToken(user.id);
       try {
-        await sendPasswordResetEmail(user.email, resetLink);
+        await sendPasswordResetEmail(user.email, otp);
       } catch (emailErr) {
         console.error('[auth.forgotPassword] email send failed', emailErr);
       }
     }
 
     return res.status(200).json({
-      message: 'If an account exists for that email, a password reset link has been sent.',
+      message: 'If an account exists for that email, a password reset OTP has been sent.',
     });
   } catch (err) {
     console.error('[auth.forgotPassword]', err);

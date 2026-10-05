@@ -15,8 +15,13 @@ export default function Modal({
   const titleId = useId();
 
   useEffect(() => {
+    if (open) {
+      closeRef.current?.focus();
+    }
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return undefined;
-    closeRef.current?.focus();
     const handler = (event) => {
       if (event.key === "Escape") onClose();
     };

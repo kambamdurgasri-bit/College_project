@@ -22,19 +22,19 @@ import { quizService } from "../../services/quizService";
 // ============================================================================
 
 const COLORS = {
-  ink: "#1E293B",
-  sub: "#64748B",
-  line: "#E4E4EC",
-  purple: "#7C3AED",
-  purpleSoft: "#F5F3FF",
-  purpleDark: "#6D28D9",
-  orange: "#F97316",
-  orangeSoft: "#FFF7ED",
-  green: "#10B981",
-  greenSoft: "#F0FDF4",
-  red: "#EF4444",
-  redSoft: "#FEF2F2",
-  white: "#FCFCFE",
+  ink: "var(--quiz-ink)",
+  sub: "var(--quiz-sub)",
+  line: "var(--quiz-line)",
+  purple: "var(--quiz-purple)",
+  purpleSoft: "var(--quiz-purple-soft)",
+  purpleDark: "var(--quiz-purple-dark)",
+  orange: "var(--quiz-orange)",
+  orangeSoft: "var(--quiz-orange-soft)",
+  green: "var(--quiz-green)",
+  greenSoft: "var(--quiz-green-soft)",
+  red: "var(--quiz-red)",
+  redSoft: "var(--quiz-red-soft)",
+  white: "var(--quiz-white)",
 };
 
 // ============================================================================
@@ -68,7 +68,7 @@ function SecondaryButton({ children, className = "", ...props }) {
   return (
     <button
       {...props}
-      className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition-colors hover:bg-slate-50 ${className}`}
+      className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition-colors hover:bg-slate-50 dark:hover:bg-white/5 ${className}`}
       style={{ borderColor: COLORS.line, color: COLORS.ink }}
     >
       {children}
@@ -78,17 +78,17 @@ function SecondaryButton({ children, className = "", ...props }) {
 
 function DifficultyBadge({ level }) {
   const difficulties = {
-    Easy: { bg: COLORS.greenSoft, color: COLORS.green, border: "#D1FAE5" },
-    Medium: { bg: COLORS.orangeSoft, color: COLORS.orange, border: "#FFEDD5" },
-    Hard: { bg: COLORS.redSoft, color: COLORS.red, border: "#FEE2E2" },
+    Easy: { bg: COLORS.greenSoft, color: COLORS.green, borderClass: "border-emerald-200 dark:border-emerald-500/20" },
+    Medium: { bg: COLORS.orangeSoft, color: COLORS.orange, borderClass: "border-orange-200 dark:border-orange-500/20" },
+    Hard: { bg: COLORS.redSoft, color: COLORS.red, borderClass: "border-red-200 dark:border-red-500/20" },
   };
 
   const style = difficulties[level] || difficulties.Medium;
 
   return (
     <span
-      className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
-      style={{ backgroundColor: style.bg, color: style.color, borderColor: style.border }}
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${style.borderClass}`}
+      style={{ backgroundColor: style.bg, color: style.color }}
     >
       {level}
     </span>
@@ -645,8 +645,8 @@ function GenerateQuiz({ goTo, source, onGenerate }) {
 
       {error && (
         <div
-          className="flex items-center gap-2 rounded-xl border p-4 text-sm"
-          style={{ borderColor: "#FEE2E2", backgroundColor: COLORS.redSoft, color: COLORS.red }}
+          className="flex items-center gap-2 rounded-xl border border-red-200 dark:border-red-500/20 p-4 text-sm"
+          style={{ backgroundColor: COLORS.redSoft, color: COLORS.red }}
         >
           <AlertCircle size={16} />
           {error}
@@ -868,7 +868,7 @@ function QuizAttempt({ goTo, quizConfig, onSubmit }) {
   return (
     <div className="flex flex-col gap-4">
       {/* Header with Timer */}
-      <div className="flex items-center justify-between gap-4 rounded-xl border bg-white p-4" style={{ borderColor: COLORS.line }}>
+      <div className="flex items-center justify-between gap-4 rounded-xl border p-4" style={{ borderColor: COLORS.line, backgroundColor: COLORS.white }}>
         <div>
           <p
             className="text-xs font-semibold uppercase tracking-wide"
@@ -925,10 +925,10 @@ function QuizAttempt({ goTo, quizConfig, onSubmit }) {
                   <button
                     key={idx}
                     onClick={() => handleAnswer(option)}
-                    className="flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-all"
+                    className="flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-all hover:opacity-80"
                     style={{
                       borderColor: isSelected ? COLORS.purple : COLORS.line,
-                      backgroundColor: isSelected ? COLORS.purpleSoft : "white",
+                      backgroundColor: isSelected ? COLORS.purpleSoft : COLORS.white,
                     }}
                   >
                     <Radio
@@ -1647,7 +1647,7 @@ export default function QuizPage({ initialScreen = "home" }) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <Loader2 size={32} className="animate-spin text-purple-600 mb-3" />
-        <p className="text-sm font-medium text-slate-600">Loading AI Quiz...</p>
+        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Loading AI Quiz...</p>
       </div>
     );
   }

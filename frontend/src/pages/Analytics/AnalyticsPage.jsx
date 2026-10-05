@@ -116,7 +116,7 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-7xl p-8 text-center text-slate-500">
+      <div className="mx-auto w-full max-w-7xl p-8 text-center text-slate-500 dark:text-slate-400">
         Loading analytics from database...
       </div>
     );
@@ -167,7 +167,7 @@ export default function AnalyticsPage() {
       <Card className="p-5">
         <SectionHeading title="Performance Trend" />
         {trendData.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-500">
+          <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
             No quiz attempts recorded yet. Attempt a quiz to build your performance trend!
           </div>
         ) : (
@@ -183,7 +183,7 @@ export default function AnalyticsPage() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" axisLine={false} tickLine={false} />
                 <YAxis domain={[0, 100]} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip />} />
+                <Tooltip content={<ChartTooltip />} cursor={false} />
                 <Area
                   type="monotone"
                   dataKey="score"
@@ -202,7 +202,7 @@ export default function AnalyticsPage() {
       <Card className="p-5">
         <SectionHeading title="Subject Performance" />
         {subjectPerformance.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-500">
+          <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
             No learning space scores recorded yet. Create a Learning Space and take a quiz!
           </div>
         ) : (
@@ -229,7 +229,7 @@ export default function AnalyticsPage() {
                     tickLine={false}
                     tick={{ fontSize: 11 }}
                   />
-                  <Tooltip content={<ChartTooltip />} />
+                  <Tooltip content={<ChartTooltip />} cursor={false} />
                   <Bar dataKey="score" name="Score" radius={[0, 6, 6, 0]}>
                     {subjectPerformance.map((item) => (
                       <Cell

@@ -56,7 +56,7 @@ function DayEventItem({ event, onEventClick, onDeleteClick }) {
               e.preventDefault();
               setMenuOpen((prev) => !prev);
             }}
-            className="rounded-lg p-1 text-slate-500 hover:bg-black/10 hover:text-slate-800 dark:hover:bg-white/20"
+            className="rounded-lg p-1 text-slate-500 hover:bg-black/10 hover:text-slate-800 dark:text-white dark:hover:bg-white/20"
             title="Options"
           >
             <MoreVertical className="h-4 w-4" />
