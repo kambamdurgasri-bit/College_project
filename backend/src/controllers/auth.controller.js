@@ -3,15 +3,14 @@ import {
   createUser,
   verifyPassword,
   generateToken,
-  createPasswordResetToken,
-  findValidResetToken,
-  consumeResetToken,
-  updateUserPassword,
+  createPasswordResetOtp,
+  verifyPasswordResetOtp,
+  resetUserPassword,
 } from '../services/auth.service.js';
 import { sendPasswordResetEmail } from '../services/email.service.js';
 
 function isValidEmail(email) {
-  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
 export async function register(req, res) {
@@ -28,12 +27,18 @@ export async function register(req, res) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
-    const existing = await findUserByEmail(email);
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = await findUserByEmail(cleanEmail);
     if (existing) {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    const user = await createUser({ name, email, password, phoneNumber });
+    const user = await createUser({
+      name: name.trim(),
+      email: cleanEmail,
+      password,
+      phoneNumber,
+    });
     const token = generateToken(user);
 
     return res.status(201).json({ user, token });
@@ -51,7 +56,8 @@ export async function login(req, res) {
       return res.status(400).json({ error: 'email and password are required' });
     }
 
-    const user = await findUserByEmail(email);
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await findUserByEmail(cleanEmail);
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -85,27 +91,45 @@ export async function me(req, res) {
   }
 }
 
+/**
+ * Step 1 & 2: Handles Forgot Password request & generates cryptographically secure OTP.
+ * Prevents account enumeration by returning a generic response for non-existent emails.
+ * Dispatches OTP via Gmail SMTP over STARTTLS with fast non-blocking response.
+ */
 export async function forgotPassword(req, res) {
   try {
     const { email } = req.body;
 
     if (!email || !isValidEmail(email)) {
-      return res.status(400).json({ error: 'A valid email is required' });
+      return res.status(400).json({ error: 'A valid email address is required.' });
     }
 
-    const user = await findUserByEmail(email);
+    const cleanEmail = email.trim().toLowerCase();
+    const otpResult = await createPasswordResetOtp(cleanEmail);
 
-    // Always return the same response, whether or not the email exists —
-    // this prevents attackers from using this endpoint to discover which emails are registered.
-    if (user) {
-      const otp = await createPasswordResetToken(user.id);
-      try {
-        await sendPasswordResetEmail(user.email, otp);
-      } catch (emailErr) {
-        console.error('[auth.forgotPassword] email send failed', emailErr);
-      }
+    if (otpResult.cooldown) {
+      return res.status(429).json({
+        error: otpResult.message,
+        waitSeconds: otpResult.waitSeconds,
+      });
     }
 
+    if (otpResult.userFound && otpResult.otp) {
+      // Dispatch email send. Race with a short timeout so user doesn't wait indefinitely for SMTP
+      const emailPromise = sendPasswordResetEmail(otpResult.user.email, otpResult.otp).catch((emailErr) => {
+        console.error('[auth.forgotPassword] Gmail SMTP send failed:', emailErr.message || emailErr);
+      });
+
+      // Allow up to 1500ms for inline delivery confirmation; if slower, continues in background
+      await Promise.race([
+        emailPromise,
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
+    } else {
+      console.warn(`[auth.forgotPassword] Request for unverified email: ${cleanEmail}`);
+    }
+
+    // Generic response to prevent email enumeration
     return res.status(200).json({
       message: 'If an account exists for that email, a password reset OTP has been sent.',
     });
@@ -115,26 +139,62 @@ export async function forgotPassword(req, res) {
   }
 }
 
+/**
+ * Step 4: Verifies the 6-digit OTP against the stored hash.
+ * Enforces maximum 5 attempts, validates expiration (5 min), and returns a short-lived resetToken.
+ */
+export async function verifyOtp(req, res) {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !isValidEmail(email)) {
+      return res.status(400).json({ error: 'A valid email address is required.' });
+    }
+    if (!otp || String(otp).trim().length !== 6) {
+      return res.status(400).json({ error: 'Please enter a valid 6-digit OTP code.' });
+    }
+
+    const result = await verifyPasswordResetOtp(email, String(otp).trim());
+    if (!result.success) {
+      return res.status(result.status || 400).json({ error: result.error });
+    }
+
+    return res.status(200).json({
+      message: 'OTP verified successfully.',
+      resetToken: result.resetToken,
+    });
+  } catch (err) {
+    console.error('[auth.verifyOtp]', err);
+    return res.status(500).json({ error: 'Verification failed. Please try again.' });
+  }
+}
+
+/**
+ * Step 5: Completes the password reset using the server-verified reset authorization token.
+ * Validates token, hashes password using bcrypt, and invalidates all reset records.
+ */
 export async function resetPassword(req, res) {
   try {
-    const { token, password } = req.body;
+    const { email, resetToken, password } = req.body;
 
-    if (!token || !password) {
-      return res.status(400).json({ error: 'token and password are required' });
+    if (!email || !resetToken || !password) {
+      return res.status(400).json({ error: 'Email, reset token, and new password are required.' });
     }
     if (password.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+      return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
     }
 
-    const record = await findValidResetToken(token);
-    if (!record) {
-      return res.status(400).json({ error: 'This reset link is invalid or has expired' });
+    const result = await resetUserPassword({
+      email,
+      resetToken,
+      newPassword: password,
+    });
+
+    if (!result.success) {
+      return res.status(result.status || 400).json({ error: result.error });
     }
 
-    await updateUserPassword(record.userId, password);
-    await consumeResetToken(token);
-
-    return res.status(200).json({ message: 'Password updated successfully' });
+    return res.status(200).json({ message: 'Password updated successfully.' });
   } catch (err) {
     console.error('[auth.resetPassword]', err);
     return res.status(500).json({ error: 'Something went wrong. Please try again.' });

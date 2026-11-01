@@ -1,8 +1,17 @@
+import "./env.js";
 import { PrismaClient } from "@prisma/client";
 
-// One shared Prisma Client instance for the whole backend.
-// Everyone (Durga/Madhavi/Pravalika) should import from here rather than
-// creating their own `new PrismaClient()` in each file.
-const prisma = new PrismaClient();
+// Prevent multiple instances of Prisma Client during development / nodemon restarts
+const globalForPrisma = globalThis;
+
+const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: ["error", "warn"],
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+}
 
 export default prisma;
