@@ -123,20 +123,10 @@ export async function forgotPassword(req, res) {
         emailResult = { sent: false, error: emailErr.message };
       }
 
-      const responsePayload = {
+      return res.status(200).json({
         message: 'If an account exists for that email, a password reset OTP has been sent.',
         sent: Boolean(emailResult?.sent),
-      };
-
-      // Always include demoOtp if email was blocked/unconfigured or in demo mode so user is never stuck
-      if (!emailResult?.sent || process.env.SHOW_TEST_OTP !== 'false') {
-        responsePayload.demoOtp = otpResult.otp;
-        if (!emailResult?.sent) {
-          responsePayload.deliveryNotice = 'Email dispatch did not complete. For evaluation / testing, use demo OTP below.';
-        }
-      }
-
-      return res.status(200).json(responsePayload);
+      });
     } else {
       console.warn(`[auth.forgotPassword] Request for unverified email: ${cleanEmail}`);
     }

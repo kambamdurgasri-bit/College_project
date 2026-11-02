@@ -132,11 +132,7 @@ export default function ForgotPasswordPage() {
         body: { email: cleanEmail },
       });
       setStep("otp");
-      if (data?.demoOtp) {
-        setSuccessInfo(`OTP sent! (Test/Demo OTP: ${data.demoOtp})`);
-      } else {
-        setSuccessInfo(`OTP sent to ${maskEmail(cleanEmail)}.`);
-      }
+      setSuccessInfo(`We sent a 6-digit OTP code to ${maskEmail(cleanEmail)}.`);
     } catch (err) {
       setError(err.message || "Failed to send OTP. Please try again.");
     } finally {
@@ -161,11 +157,7 @@ export default function ForgotPasswordPage() {
       setOtp("");
       setResendCooldown(60);
       setExpiryCountdown(300);
-      if (data?.demoOtp) {
-        setSuccessInfo(`New OTP sent! (Test/Demo OTP: ${data.demoOtp})`);
-      } else {
-        setSuccessInfo("A new 6-digit OTP has been sent to your email.");
-      }
+      setSuccessInfo("A new 6-digit OTP has been sent to your email.");
 
       // Restart resend timer
       clearInterval(resendTimerRef.current);
