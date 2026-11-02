@@ -127,12 +127,16 @@ export default function ForgotPasswordPage() {
     const slowTimer = setTimeout(() => setSlowRequest(true), 3000);
 
     try {
-      await apiRequest("/auth/forgot-password", {
+      const data = await apiRequest("/auth/forgot-password", {
         method: "POST",
         body: { email: cleanEmail },
       });
       setStep("otp");
-      setSuccessInfo(`OTP sent to ${maskEmail(cleanEmail)}.`);
+      if (data?.demoOtp) {
+        setSuccessInfo(`OTP sent! (Test/Demo OTP: ${data.demoOtp})`);
+      } else {
+        setSuccessInfo(`OTP sent to ${maskEmail(cleanEmail)}.`);
+      }
     } catch (err) {
       setError(err.message || "Failed to send OTP. Please try again.");
     } finally {
@@ -150,14 +154,18 @@ export default function ForgotPasswordPage() {
     setSubmitting(true);
 
     try {
-      await apiRequest("/auth/resend-otp", {
+      const data = await apiRequest("/auth/resend-otp", {
         method: "POST",
         body: { email: email.trim() },
       });
       setOtp("");
       setResendCooldown(60);
       setExpiryCountdown(300);
-      setSuccessInfo("A new 6-digit OTP has been sent to your email.");
+      if (data?.demoOtp) {
+        setSuccessInfo(`New OTP sent! (Test/Demo OTP: ${data.demoOtp})`);
+      } else {
+        setSuccessInfo("A new 6-digit OTP has been sent to your email.");
+      }
 
       // Restart resend timer
       clearInterval(resendTimerRef.current);

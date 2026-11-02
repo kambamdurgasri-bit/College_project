@@ -115,16 +115,28 @@ export async function forgotPassword(req, res) {
     }
 
     if (otpResult.userFound && otpResult.otp) {
-      // Dispatch email send (Brevo HTTP API via port 443 or SMTP fallback)
-      const emailPromise = sendPasswordResetEmail(otpResult.user.email, otpResult.otp).catch((emailErr) => {
+      let emailResult = { sent: false };
+      try {
+        emailResult = await sendPasswordResetEmail(otpResult.user.email, otpResult.otp);
+      } catch (emailErr) {
         console.error('[auth.forgotPassword] Email dispatch error:', emailErr.message || emailErr);
-      });
+        emailResult = { sent: false, error: emailErr.message };
+      }
 
-      // Allow up to 3500ms for HTTP API delivery confirmation
-      await Promise.race([
-        emailPromise,
-        new Promise((resolve) => setTimeout(resolve, 3500)),
-      ]);
+      const responsePayload = {
+        message: 'If an account exists for that email, a password reset OTP has been sent.',
+        sent: Boolean(emailResult?.sent),
+      };
+
+      // Always include demoOtp if email was blocked/unconfigured or in demo mode so user is never stuck
+      if (!emailResult?.sent || process.env.SHOW_TEST_OTP !== 'false') {
+        responsePayload.demoOtp = otpResult.otp;
+        if (!emailResult?.sent) {
+          responsePayload.deliveryNotice = 'Email dispatch did not complete. For evaluation / testing, use demo OTP below.';
+        }
+      }
+
+      return res.status(200).json(responsePayload);
     } else {
       console.warn(`[auth.forgotPassword] Request for unverified email: ${cleanEmail}`);
     }
@@ -137,6 +149,43 @@ export async function forgotPassword(req, res) {
     console.error('[auth.forgotPassword]', err);
     return res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
+}
+
+/**
+ * Diagnostic endpoint to check Brevo and SMTP configuration status live on Render.
+ */
+export async function emailStatus(req, res) {
+  const brevoKey = (process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || '').trim();
+  const smtpUser = (process.env.SMTP_EMAIL || process.env.GMAIL_USER || '').trim();
+  const senderEmail = (process.env.BREVO_SENDER_EMAIL || process.env.SMTP_EMAIL || process.env.GMAIL_USER || '').trim();
+
+  let brevoAccount = null;
+  if (brevoKey) {
+    try {
+      const resp = await fetch('https://api.brevo.com/v3/account', {
+        headers: { 'api-key': brevoKey, accept: 'application/json' },
+      });
+      const data = await resp.json().catch(() => ({}));
+      brevoAccount = resp.ok ? { ok: true, email: data.email, plan: data.plan } : { ok: false, status: resp.status, error: data };
+    } catch (e) {
+      brevoAccount = { ok: false, error: e.message };
+    }
+  }
+
+  return res.status(200).json({
+    timestamp: new Date().toISOString(),
+    brevo: {
+      configured: Boolean(brevoKey),
+      keyPreview: brevoKey ? `${brevoKey.substring(0, 10)}...` : 'NOT_SET',
+      senderEmail: senderEmail || 'NOT_SET',
+      accountCheck: brevoAccount,
+    },
+    smtp: {
+      configured: Boolean(smtpUser && (process.env.SMTP_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD)),
+      user: smtpUser || 'NOT_SET',
+      note: 'Render Free tier blocks outbound SMTP ports 25, 465, 587. Brevo HTTP API is required.',
+    },
+  });
 }
 
 /**
