@@ -38,14 +38,14 @@ export default function ChangePasswordModal({ open, onClose }) {
       open={open}
       onClose={close}
       title="Change Password"
-      subtitle="Demo validation; no password is stored"
+      subtitle="Enter your current password and choose a new secure password"
       icon={KeyRound}
     >
       {state === "success" ? (
         <div className="py-6 text-center">
           <Check className="mx-auto text-emerald-600" />
           <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">
-            Password updated
+            Password updated successfully!
           </p>
         </div>
       ) : (

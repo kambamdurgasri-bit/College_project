@@ -3,8 +3,9 @@ import nodemailer from "nodemailer";
 let cachedTransporter = null;
 
 /**
- * Returns a configured, connection-pooled Nodemailer transporter for Gmail SMTP (port 587).
- * Reuses the pool across requests to avoid slow TLS re-negotiation.
+ * Returns a configured Nodemailer transporter for Gmail SMTP.
+ * Note: Render's Free tier blocks outbound SMTP ports 25, 465, and 587.
+ * Nodemailer is kept for local development or paid server deployments.
  */
 export function getEmailTransporter() {
   if (cachedTransporter) {
@@ -13,20 +14,14 @@ export function getEmailTransporter() {
 
   const user = (process.env.SMTP_EMAIL || process.env.GMAIL_USER || "").trim();
   const rawPass = (process.env.SMTP_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD || "");
-  const pass = rawPass.replace(/\s+/g, "");
+  const pass = rawPass.replace(/["'\s]/g, "");
 
   if (!user || !pass) {
     return null;
   }
 
   cachedTransporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false, // STARTTLS
-    requireTLS: true,
-    pool: true, // Keep connection pool warm for instant sending
-    maxConnections: 3,
-    maxMessages: 100,
+    service: "gmail",
     auth: {
       user,
       pass,
@@ -37,33 +32,54 @@ export function getEmailTransporter() {
 }
 
 /**
- * Sends a secure password reset OTP via personal Gmail SMTP.
- *
- * @param {string} to - Recipient email address
- * @param {string} otp - 6-digit verification code
- * @returns {Promise<{ sent: boolean, info?: any, reason?: string, otp?: string }>}
+ * Sends transactional email using Brevo (Sendinblue) HTTP API over HTTPS (Port 443).
+ * Port 443 is NEVER blocked by Render or other cloud providers.
  */
-export async function sendPasswordResetEmail(to, otp) {
-  const transporter = getEmailTransporter();
-  const senderEmail = (process.env.SMTP_EMAIL || process.env.GMAIL_USER || "").trim();
-
-  if (!transporter || !senderEmail) {
-    console.warn(
-      `\n================================================================\n` +
-      `[email] WARNING: Gmail SMTP is not configured!\n` +
-      `[email] Required: SMTP_EMAIL and SMTP_APP_PASSWORD in backend/.env\n` +
-      `[email] Password reset email was NOT sent to: ${to}\n` +
-      `[email] Generated 6-digit OTP for testing: ${otp}\n` +
-      `================================================================\n`
-    );
-    return { sent: false, reason: "NOT_CONFIGURED", otp };
+async function sendViaBrevo({ to, otp, subject, htmlContent }) {
+  const apiKey = (process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || "").trim();
+  if (!apiKey) {
+    return null;
   }
 
-  const mailOptions = {
-    from: `"LearnTrack AI" <${senderEmail}>`,
-    to: to.trim(),
-    subject: `${otp} is your LearnTrack AI password reset verification code`,
-    html: `
+  const senderEmail = (
+    process.env.BREVO_SENDER_EMAIL ||
+    process.env.SMTP_EMAIL ||
+    process.env.GMAIL_USER ||
+    "temporaryemails0410@gmail.com"
+  ).trim();
+  const senderName = (process.env.BREVO_SENDER_NAME || "LearnTrack AI").trim();
+
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "accept": "application/json",
+      "api-key": apiKey,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      sender: { name: senderName, email: senderEmail },
+      to: [{ email: to.trim() }],
+      subject,
+      htmlContent,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const errorMsg = data?.message || `Brevo API error HTTP ${response.status}`;
+    throw new Error(errorMsg);
+  }
+
+  console.log(`[email] Password reset OTP sent successfully via Brevo HTTP API to: ${to} (MessageId: ${data?.messageId || "ok"})`);
+  return { sent: true, provider: "brevo", data };
+}
+
+/**
+ * Builds HTML template for the 6-digit OTP email.
+ */
+function buildOtpHtml(otp) {
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -125,10 +141,72 @@ export async function sendPasswordResetEmail(to, otp) {
   </table>
 </body>
 </html>
-    `,
-  };
+  `;
+}
 
-  const info = await transporter.sendMail(mailOptions);
-  console.log(`[email] Password reset OTP sent successfully via Gmail SMTP to: ${to}`);
-  return { sent: true, info };
+/**
+ * Sends a secure password reset OTP.
+ * Priority 1: Brevo HTTP API (Port 443 — reliable on Render Free tier)
+ * Priority 2: Nodemailer Gmail SMTP (Fallback for local dev)
+ * Priority 3: Fallback log for demo / evaluation
+ *
+ * @param {string} to - Recipient email address
+ * @param {string} otp - 6-digit verification code
+ * @returns {Promise<{ sent: boolean, provider?: string, info?: any, reason?: string, otp?: string }>}
+ */
+export async function sendPasswordResetEmail(to, otp) {
+  const subject = `${otp} is your LearnTrack AI password reset verification code`;
+  const htmlContent = buildOtpHtml(otp);
+
+  // 1. Try Brevo HTTP API (Recommended for Render)
+  try {
+    const brevoResult = await sendViaBrevo({ to, otp, subject, htmlContent });
+    if (brevoResult) {
+      return brevoResult;
+    }
+  } catch (brevoErr) {
+    console.error(`[email] Brevo API failed: ${brevoErr.message}. Attempting SMTP fallback...`);
+  }
+
+  // 2. Try Nodemailer SMTP (Works locally or on paid servers)
+  const transporter = getEmailTransporter();
+  const senderEmail = (process.env.SMTP_EMAIL || process.env.GMAIL_USER || "").trim();
+
+  if (transporter && senderEmail) {
+    try {
+      const mailOptions = {
+        from: `"LearnTrack AI" <${senderEmail}>`,
+        to: to.trim(),
+        subject,
+        html: htmlContent,
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`[email] Password reset OTP sent successfully via Gmail SMTP to: ${to}`);
+      return { sent: true, provider: "smtp", info };
+    } catch (smtpErr) {
+      console.error(`[email] Gmail SMTP failed: ${smtpErr.message}`);
+      console.warn(
+        `\n================================================================\n` +
+        `[email] NOTE: Render Free tier blocks outbound SMTP ports (587, 465).\n` +
+        `[email] To send real emails from Render, add BREVO_API_KEY to Render Environment!\n` +
+        `[email] Target Email: ${to}\n` +
+        `[email] Generated 6-digit OTP for testing: ${otp}\n` +
+        `================================================================\n`
+      );
+      return { sent: false, reason: "SMTP_FAILED", error: smtpErr.message, otp };
+    }
+  }
+
+  // 3. Fallback when neither is configured
+  console.warn(
+    `\n================================================================\n` +
+    `[email] WARNING: No email service is configured!\n` +
+    `[email] On Render Free tier, add BREVO_API_KEY in the Render Environment tab.\n` +
+    `[email] Target Email: ${to}\n` +
+    `[email] Generated 6-digit OTP for testing: ${otp}\n` +
+    `================================================================\n`
+  );
+
+  return { sent: false, reason: "NOT_CONFIGURED", otp };
 }

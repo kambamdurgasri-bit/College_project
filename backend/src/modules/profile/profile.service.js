@@ -97,6 +97,7 @@ export async function getProfile(userId) {
     ...user,
     fullName: user.name,
     phone: user.phoneNumber || "",
+    phoneNumber: user.phoneNumber || "",
     dob: user.dob || "",
     gender: user.gender || "Not Specified",
     university: user.university || "",
@@ -112,31 +113,42 @@ export async function getProfile(userId) {
 }
 
 export async function updateProfile(userId, data) {
-  const { 
-    fullName, name, phone, phoneNumber, 
-    dob, gender, university, branch, department, about, avatar 
+  const {
+    fullName,
+    name,
+    email,
+    phone,
+    phoneNumber,
+    dob,
+    gender,
+    university,
+    branch,
+    department,
+    about,
+    avatar,
   } = data;
-  
+
   const newName = fullName || name;
   const newPhone = phone !== undefined ? phone : phoneNumber;
 
-  const updatedUser = await prisma.users.update({
+  const updateFields = {};
+  if (newName !== undefined) updateFields.name = newName;
+  if (email !== undefined) updateFields.email = email;
+  if (newPhone !== undefined) updateFields.phoneNumber = newPhone;
+  if (dob !== undefined) updateFields.dob = dob;
+  if (gender !== undefined) updateFields.gender = gender;
+  if (university !== undefined) updateFields.university = university;
+  if (branch !== undefined) updateFields.branch = branch;
+  if (department !== undefined) updateFields.department = department;
+  if (about !== undefined) updateFields.about = about;
+  if (avatar !== undefined) updateFields.avatar = avatar;
+
+  await prisma.users.update({
     where: { id: userId },
-    data: {
-      ...(newName && { name: newName }),
-      ...(newPhone !== undefined && { phoneNumber: newPhone }),
-      ...(dob !== undefined && { dob }),
-      ...(gender !== undefined && { gender }),
-      ...(university !== undefined && { university }),
-      ...(branch !== undefined && { branch }),
-      ...(department !== undefined && { department }),
-      ...(about !== undefined && { about }),
-      ...(avatar !== undefined && { avatar }),
-    },
-    select: { id: true },
+    data: updateFields,
   });
 
-  return getProfile(updatedUser.id);
+  return getProfile(userId);
 }
 
 export async function changePassword(userId, currentPassword, newPassword) {
@@ -155,4 +167,75 @@ export async function changePassword(userId, currentPassword, newPassword) {
 
   await updateUserPassword(userId, newPassword);
   return { message: "Password updated successfully" };
+}
+
+export async function deleteAccount(userId) {
+  // Cascading deletion to safely delete all user data
+  await prisma.attemptAnswers.deleteMany({
+    where: {
+      quizAttempt: {
+        userId,
+      },
+    },
+  });
+
+  await prisma.quizAttempts.deleteMany({
+    where: { userId },
+  });
+
+  await prisma.progress.deleteMany({
+    where: { userId },
+  });
+
+  await prisma.recommendations.deleteMany({
+    where: { userId },
+  });
+
+  await prisma.timetables.deleteMany({
+    where: { userId },
+  });
+
+  await prisma.resources.deleteMany({
+    where: { learningSpace: { userId } },
+  });
+
+  await prisma.questions.deleteMany({
+    where: {
+      quiz: {
+        learningSpace: {
+          userId,
+        },
+      },
+    },
+  });
+
+  await prisma.quizzes.deleteMany({
+    where: {
+      learningSpace: {
+        userId,
+      },
+    },
+  });
+
+  await prisma.topics.deleteMany({
+    where: {
+      learningSpace: {
+        userId,
+      },
+    },
+  });
+
+  await prisma.learningSpaces.deleteMany({
+    where: { userId },
+  });
+
+  await prisma.passwordResets.deleteMany({
+    where: { userId },
+  });
+
+  await prisma.users.delete({
+    where: { id: userId },
+  });
+
+  return { success: true, message: "Account deleted successfully" };
 }

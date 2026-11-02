@@ -115,15 +115,15 @@ export async function forgotPassword(req, res) {
     }
 
     if (otpResult.userFound && otpResult.otp) {
-      // Dispatch email send. Race with a short timeout so user doesn't wait indefinitely for SMTP
+      // Dispatch email send (Brevo HTTP API via port 443 or SMTP fallback)
       const emailPromise = sendPasswordResetEmail(otpResult.user.email, otpResult.otp).catch((emailErr) => {
-        console.error('[auth.forgotPassword] Gmail SMTP send failed:', emailErr.message || emailErr);
+        console.error('[auth.forgotPassword] Email dispatch error:', emailErr.message || emailErr);
       });
 
-      // Allow up to 1500ms for inline delivery confirmation; if slower, continues in background
+      // Allow up to 3500ms for HTTP API delivery confirmation
       await Promise.race([
         emailPromise,
-        new Promise((resolve) => setTimeout(resolve, 1500)),
+        new Promise((resolve) => setTimeout(resolve, 3500)),
       ]);
     } else {
       console.warn(`[auth.forgotPassword] Request for unverified email: ${cleanEmail}`);

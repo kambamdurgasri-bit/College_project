@@ -5,17 +5,17 @@ const PROFILE_STORAGE_KEY = "learntrack-profile";
 const PREFERENCES_STORAGE_KEY = "learntrack-preferences";
 
 const defaultProfile = {
-  fullName: "Tyone",
-  email: "tyone@learntrack.ai",
-  phone: "555-019-8372",
-  dob: "2001-05-22",
-  gender: "Male",
-  university: "Stanford University",
+  fullName: "User",
+  email: "user@example.com",
+  phone: "Not provided",
+  dob: "2000-01-01",
+  gender: "Not Specified",
+  university: "State University",
   branch: "Computer Science",
-  department: "Senior Year, Undergrad",
-  learningLevel: "Advanced",
-  about: "I'm a senior CS major passionate about Artificial Intelligence and Full-Stack Engineering. Currently building scalable web applications and researching neural network optimizations.",
-  avatar: "https://api.dicebear.com/7.x/notionists/svg?seed=Tyone&backgroundColor=F4F2FF",
+  department: "Computer Science & Engineering",
+  learningLevel: "Intermediate",
+  about: "Active learner tracking progress on LearnTrack AI.",
+  avatar: "https://api.dicebear.com/7.x/notionists/svg?seed=User&backgroundColor=F4F2FF",
 };
 
 const defaultPreferences = {
@@ -30,17 +30,42 @@ const defaultPreferences = {
   language: "English (India)",
 };
 
+function getProfileStorageKey() {
+  if (typeof window === "undefined") return PROFILE_STORAGE_KEY;
+  try {
+    const rawUser = window.localStorage.getItem("learntrack-user");
+    const user = rawUser ? JSON.parse(rawUser) : null;
+    return user?.id ? `${PROFILE_STORAGE_KEY}-${user.id}` : PROFILE_STORAGE_KEY;
+  } catch {
+    return PROFILE_STORAGE_KEY;
+  }
+}
+
 const listeners = new Set();
 let profile = readStoredProfile();
 
 function readStoredProfile() {
   if (typeof window === "undefined") return { ...defaultProfile };
   try {
-    const stored = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+    const key = getProfileStorageKey();
+    const stored = window.localStorage.getItem(key) || window.localStorage.getItem(PROFILE_STORAGE_KEY);
     const parsed = stored ? JSON.parse(stored) : {};
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? { ...defaultProfile, ...parsed }
-      : { ...defaultProfile };
+    
+    // Also cross-reference with stored auth user if available
+    let authUser = {};
+    try {
+      const rawUser = window.localStorage.getItem("learntrack-user");
+      if (rawUser) authUser = JSON.parse(rawUser);
+    } catch {}
+
+    const merged = {
+      ...defaultProfile,
+      ...(authUser?.name ? { fullName: authUser.name } : {}),
+      ...(authUser?.email ? { email: authUser.email } : {}),
+      ...(authUser?.phoneNumber ? { phone: authUser.phoneNumber } : {}),
+      ...parsed,
+    };
+    return merged;
   } catch {
     return { ...defaultProfile };
   }
@@ -51,11 +76,30 @@ function notify() {
 }
 
 export async function getProfile() {
+  const currentStored = readStoredProfile();
   try {
     const serverProfile = await apiRequest("/profile");
     if (serverProfile) {
-      profile = { ...defaultProfile, ...serverProfile };
+      profile = {
+        ...defaultProfile,
+        ...serverProfile,
+        fullName: serverProfile.fullName || serverProfile.name || defaultProfile.fullName,
+        email: serverProfile.email || defaultProfile.email,
+        phone: serverProfile.phoneNumber || serverProfile.phone || defaultProfile.phone,
+        dob: serverProfile.dob !== undefined ? serverProfile.dob : defaultProfile.dob,
+        gender: serverProfile.gender || defaultProfile.gender,
+        university: serverProfile.university !== undefined ? serverProfile.university : defaultProfile.university,
+        branch: serverProfile.branch !== undefined ? serverProfile.branch : defaultProfile.branch,
+        department: serverProfile.department !== undefined ? serverProfile.department : defaultProfile.department,
+        about: serverProfile.about !== undefined ? serverProfile.about : defaultProfile.about,
+        avatar: serverProfile.avatar || defaultProfile.avatar,
+        quickStats: serverProfile.quickStats || [],
+        achievements: serverProfile.achievements || { badges: [], certificates: [], milestones: [] },
+        activityTimeline: serverProfile.activityTimeline || [],
+      };
+
       if (typeof window !== "undefined") {
+        window.localStorage.setItem(getProfileStorageKey(), JSON.stringify(profile));
         window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
       }
       notify();
@@ -64,11 +108,14 @@ export async function getProfile() {
   } catch (err) {
     console.warn("Could not fetch profile from server, using cached profile.", err);
   }
+  profile = currentStored;
+  notify();
   return { ...profile };
 }
 
 export async function updateProfile(updates) {
   const nextProfile = { ...profile, ...updates };
+
   if (
     typeof nextProfile.avatar === "string" &&
     nextProfile.avatar.startsWith("blob:")
@@ -85,14 +132,41 @@ export async function updateProfile(updates) {
       method: "PUT",
       body: updates,
     });
-    profile = { ...nextProfile, ...updatedServer };
+    if (updatedServer) {
+      profile = {
+        ...defaultProfile,
+        ...updatedServer,
+      };
+    } else {
+      profile = nextProfile;
+    }
   } catch (err) {
+    console.warn("Server profile update failed, using local profile:", err);
     profile = nextProfile;
   }
 
   if (typeof window !== "undefined") {
+    window.localStorage.setItem(getProfileStorageKey(), JSON.stringify(profile));
     window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+
+    // Sync with auth user store so navbar, sidebar, and headers update immediately
+    try {
+      const rawUser = window.localStorage.getItem("learntrack-user");
+      if (rawUser) {
+        const authUser = JSON.parse(rawUser);
+        const updatedAuthUser = {
+          ...authUser,
+          name: profile.fullName || profile.name || authUser.name,
+          email: profile.email || authUser.email,
+          phoneNumber: profile.phone || profile.phoneNumber || authUser.phoneNumber,
+        };
+        window.localStorage.setItem("learntrack-user", JSON.stringify(updatedAuthUser));
+      }
+    } catch (e) {
+      console.warn("Failed to sync auth user storage:", e);
+    }
   }
+
   notify();
   return { ...profile };
 }
@@ -116,6 +190,18 @@ export async function changePassword({ current, next, confirm }) {
 }
 
 export async function deleteAccount() {
+  try {
+    await apiRequest("/profile", { method: "DELETE" });
+  } catch (err) {
+    console.warn("Could not delete account on server, proceeding with local cleanup:", err);
+  }
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(getProfileStorageKey());
+    window.localStorage.removeItem(PROFILE_STORAGE_KEY);
+    window.localStorage.removeItem(PREFERENCES_STORAGE_KEY);
+    window.localStorage.removeItem("learntrack-token");
+    window.localStorage.removeItem("learntrack-user");
+  }
   return { success: true };
 }
 
@@ -209,21 +295,20 @@ export function updatePreferences(updates) {
 }
 
 export function useProfile() {
-  const [state, setState] = useState({
-    data: null,
-    loading: true,
-    error: null,
+  const [state, setState] = useState(() => {
+    const cached = readStoredProfile();
+    return {
+      data: cached,
+      loading: false,
+      error: null,
+    };
   });
 
   const load = async () => {
-    setState((current) => ({
-      ...current,
-      loading: true,
-      error: null,
-    }));
     try {
+      const data = await getProfile();
       setState({
-        data: await getProfile(),
+        data,
         loading: false,
         error: null,
       });
@@ -231,7 +316,7 @@ export function useProfile() {
       setState((current) => ({
         ...current,
         loading: false,
-        error,
+        error: current.data ? null : error,
       }));
     }
   };
@@ -245,3 +330,4 @@ export function useProfile() {
 
   return { ...state, reload: load };
 }
+

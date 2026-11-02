@@ -24,11 +24,15 @@ export default function DetailsCard({ user }) {
         <InfoField label="Phone" value={user.phone} icon={Phone} />
         <InfoField
           label="Date of Birth"
-          value={new Date(user.dob).toLocaleDateString("en-IN", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
+          value={
+            user.dob && !isNaN(new Date(user.dob).getTime())
+              ? new Date(user.dob).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })
+              : user.dob || "Not provided"
+          }
           icon={Cake}
         />
         <InfoField label="Gender" value={user.gender} icon={VenetianMask} />

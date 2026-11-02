@@ -9,5 +9,7 @@ router.use(requireAuth);
 router.get("/", controller.getProfile);
 router.put("/", controller.updateProfile);
 router.post("/change-password", controller.changePassword);
+router.delete("/", controller.deleteAccount);
+router.delete("/account", controller.deleteAccount);
 
 export default router;

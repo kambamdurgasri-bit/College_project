@@ -1,14 +1,18 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Bell,
+  CheckCircle2,
   KeyRound,
   Lock,
   LogOut,
   Mail,
+  Moon,
   Palette,
+  Pencil,
   ShieldCheck,
-  Trash2,
   Sun,
+  Trash2,
 } from "lucide-react";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
 import { SelectField } from "../components/ui/InfoField.jsx";
@@ -23,8 +27,13 @@ import {
   updatePreferences,
   useProfile,
 } from "../services/profileService.js";
+import { useAuthStore } from "../store/authStore.js";
+import { useThemeStore } from "../store/themeStore.js";
 
 export default function SettingsPage() {
+  const navigate = useNavigate();
+  const logout = useAuthStore((s) => s.logout);
+  const { theme, toggleTheme } = useThemeStore();
   const { data: profile, loading } = useProfile();
   const preferences = getPreferences();
 
@@ -32,30 +41,52 @@ export default function SettingsPage() {
   const [visibility, setVisibility] = useState(preferences.visibility);
   const [dataSharing, setDataSharing] = useState(preferences.dataSharing);
   const [language, setLanguage] = useState(preferences.language);
+  const [toastMessage, setToastMessage] = useState("");
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const savePreference = (updates) => updatePreferences(updates);
+  const showToast = (message) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage((curr) => (curr === message ? "" : curr));
+    }, 2500);
+  };
 
-  const toggle = (key) => (value) => {
+  const savePreference = (updates, message = "Preferences saved") => {
+    updatePreferences(updates);
+    showToast(message);
+  };
+
+  const toggleNotification = (key, label) => (value) => {
     const next = { ...notifications, [key]: value };
     setNotifications(next);
-    savePreference({ notifications: next });
+    savePreference({ notifications: next }, `${label} ${value ? "enabled" : "disabled"}`);
   };
 
   const handleLogout = () => {
-    // Demo: just close the modal
     setLogoutOpen(false);
+    logout();
+    navigate("/login");
   };
 
   return (
     <div className="space-y-6">
-      <SectionTitle
-        title="Settings"
-        subtitle="Manage your account, notifications, appearance and privacy"
-      />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <SectionTitle
+          title="Settings"
+          subtitle="Manage your account, notifications, appearance and privacy"
+        />
+        {toastMessage && (
+          <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm transition-all dark:border-emerald-800/60 dark:bg-emerald-950/60 dark:text-emerald-300">
+            <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Account Section */}
         <SettingsCard
           icon={ShieldCheck}
           title="Account"
@@ -66,16 +97,27 @@ export default function SettingsPage() {
             label="Change Password"
             description="Update your account password"
             onClick={() => setPasswordOpen(true)}
-            control={<KeyRound size={16} className="text-slate-500 dark:text-slate-500" />}
+            control={<KeyRound size={16} className="text-slate-500 hover:text-brand-600 dark:text-slate-400" />}
           />
           <SettingsRow
             label="Email Address"
-            description={loading ? "Loading email..." : profile?.email}
+            description={loading ? "Loading email..." : (profile?.email || "Not provided")}
             control={
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 dark:text-brand-400">
-                <Mail size={13} />
-                Verified
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  <Mail size={13} />
+                  Active
+                </span>
+                <button
+                  type="button"
+                  onClick={() => navigate("/profile/edit")}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100 hover:text-brand-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"
+                  title="Edit profile & email"
+                >
+                  <Pencil size={11} />
+                  Edit
+                </button>
+              </div>
             }
           />
           <SettingsRow
@@ -85,7 +127,7 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={() => setDeleteOpen(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50/50 px-2.5 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-900/50"
               >
                 <Trash2 size={13} />
                 Delete
@@ -94,6 +136,7 @@ export default function SettingsPage() {
           />
         </SettingsCard>
 
+        {/* Notifications Section */}
         <SettingsCard
           icon={Bell}
           title="Notifications"
@@ -107,7 +150,7 @@ export default function SettingsPage() {
               <ToggleSwitch
                 label="Email notifications"
                 checked={notifications.email}
-                onChange={toggle("email")}
+                onChange={toggleNotification("email", "Email notifications")}
               />
             }
           />
@@ -118,7 +161,7 @@ export default function SettingsPage() {
               <ToggleSwitch
                 label="Quiz alerts"
                 checked={notifications.quizAlerts}
-                onChange={toggle("quizAlerts")}
+                onChange={toggleNotification("quizAlerts", "Quiz alerts")}
               />
             }
           />
@@ -129,7 +172,7 @@ export default function SettingsPage() {
               <ToggleSwitch
                 label="Weekly reports"
                 checked={notifications.weeklyReports}
-                onChange={toggle("weeklyReports")}
+                onChange={toggleNotification("weeklyReports", "Weekly reports")}
               />
             }
           />
@@ -140,40 +183,68 @@ export default function SettingsPage() {
               <ToggleSwitch
                 label="Reminder notifications"
                 checked={notifications.reminders}
-                onChange={toggle("reminders")}
+                onChange={toggleNotification("reminders", "Study reminders")}
               />
             }
           />
         </SettingsCard>
 
+        {/* Appearance Section */}
         <SettingsCard
           icon={Palette}
           title="Appearance"
-          subtitle="Use the LearnTrack light interface"
+          subtitle="Customize interface theme and language"
           index={2}
         >
           <SettingsRow
             label="Theme"
-            description="The team application currently uses its shared light theme"
-            control={<Sun size={16} className="text-brand-600 dark:text-brand-400" />}
+            description={theme === "dark" ? "Currently using Dark Mode" : "Currently using Light Mode"}
+            control={
+              <button
+                type="button"
+                onClick={() => {
+                  toggleTheme();
+                  showToast(`Switched to ${theme === "dark" ? "Light" : "Dark"} mode`);
+                }}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+                aria-label="Toggle application theme"
+              >
+                {theme === "dark" ? (
+                  <>
+                    <Moon size={14} className="text-brand-400" />
+                    <span>Dark</span>
+                  </>
+                ) : (
+                  <>
+                    <Sun size={14} className="text-amber-500" />
+                    <span>Light</span>
+                  </>
+                )}
+              </button>
+            }
           />
           <div className="py-3.5">
             <SelectField
               label="Language"
               value={language}
               onChange={(event) => {
-                setLanguage(event.target.value);
-                savePreference({ language: event.target.value });
+                const newLang = event.target.value;
+                setLanguage(newLang);
+                savePreference({ language: newLang }, `Language updated to ${newLang}`);
               }}
             >
               <option>English (India)</option>
+              <option>English (US)</option>
               <option>Hindi</option>
               <option>Telugu</option>
               <option>Tamil</option>
+              <option>Spanish</option>
+              <option>French</option>
             </SelectField>
           </div>
         </SettingsCard>
 
+        {/* Privacy Section */}
         <SettingsCard
           icon={Lock}
           title="Privacy"
@@ -185,8 +256,9 @@ export default function SettingsPage() {
               label="Profile Visibility"
               value={visibility}
               onChange={(event) => {
-                setVisibility(event.target.value);
-                savePreference({ visibility: event.target.value });
+                const nextVis = event.target.value;
+                setVisibility(nextVis);
+                savePreference({ visibility: nextVis }, `Profile visibility set to ${nextVis}`);
               }}
             >
               <option>Public</option>
@@ -203,7 +275,7 @@ export default function SettingsPage() {
                 checked={dataSharing}
                 onChange={(value) => {
                   setDataSharing(value);
-                  savePreference({ dataSharing: value });
+                  savePreference({ dataSharing: value }, `Data sharing ${value ? "enabled" : "disabled"}`);
                 }}
               />
             }
@@ -211,6 +283,7 @@ export default function SettingsPage() {
         </SettingsCard>
       </div>
 
+      {/* Security & Sessions Section */}
       <SettingsCard
         icon={KeyRound}
         title="Security"
