@@ -31,6 +31,47 @@ export function getEmailTransporter() {
   return cachedTransporter;
 }
 
+let cachedBrevoSender = null;
+
+async function resolveBrevoSender(apiKey) {
+  if (process.env.BREVO_SENDER_EMAIL) {
+    return {
+      email: process.env.BREVO_SENDER_EMAIL.trim(),
+      name: (process.env.BREVO_SENDER_NAME || "LearnTrack AI").trim(),
+    };
+  }
+
+  if (cachedBrevoSender) {
+    return cachedBrevoSender;
+  }
+
+  try {
+    const resp = await fetch("https://api.brevo.com/v3/senders", {
+      headers: { "api-key": apiKey, accept: "application/json" },
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (Array.isArray(data.senders) && data.senders.length > 0) {
+        const active = data.senders.find((s) => s.active) || data.senders[0];
+        if (active?.email) {
+          cachedBrevoSender = {
+            email: active.email,
+            name: process.env.BREVO_SENDER_NAME || active.name || "LearnTrack AI",
+          };
+          return cachedBrevoSender;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[email] Could not fetch verified Brevo senders:", err.message);
+  }
+
+  return {
+    email: (process.env.BREVO_SENDER_EMAIL || process.env.SMTP_EMAIL || process.env.GMAIL_USER || "rguktapinfo@gmail.com").trim(),
+    name: (process.env.BREVO_SENDER_NAME || "LearnTrack AI").trim(),
+  };
+}
+
 /**
  * Sends transactional email using Brevo (Sendinblue) HTTP API over HTTPS (Port 443).
  * Port 443 is NEVER blocked by Render or other cloud providers.
@@ -41,13 +82,7 @@ async function sendViaBrevo({ to, otp, subject, htmlContent }) {
     return null;
   }
 
-  const senderEmail = (
-    process.env.BREVO_SENDER_EMAIL ||
-    process.env.SMTP_EMAIL ||
-    process.env.GMAIL_USER ||
-    "temporaryemails0410@gmail.com"
-  ).trim();
-  const senderName = (process.env.BREVO_SENDER_NAME || "LearnTrack AI").trim();
+  const sender = await resolveBrevoSender(apiKey);
 
   const response = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
@@ -57,7 +92,7 @@ async function sendViaBrevo({ to, otp, subject, htmlContent }) {
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      sender: { name: senderName, email: senderEmail },
+      sender: { name: sender.name, email: sender.email },
       to: [{ email: to.trim() }],
       subject,
       htmlContent,
@@ -71,8 +106,8 @@ async function sendViaBrevo({ to, otp, subject, htmlContent }) {
     throw new Error(errorMsg);
   }
 
-  console.log(`[email] Password reset OTP sent successfully via Brevo HTTP API to: ${to} (MessageId: ${data?.messageId || "ok"})`);
-  return { sent: true, provider: "brevo", data };
+  console.log(`[email] Password reset OTP sent successfully via Brevo from verified sender <${sender.email}> to: ${to} (MessageId: ${data?.messageId || "ok"})`);
+  return { sent: true, provider: "brevo", sender: sender.email, data };
 }
 
 /**

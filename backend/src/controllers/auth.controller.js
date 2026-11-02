@@ -160,6 +160,7 @@ export async function emailStatus(req, res) {
   const senderEmail = (process.env.BREVO_SENDER_EMAIL || process.env.SMTP_EMAIL || process.env.GMAIL_USER || '').trim();
 
   let brevoAccount = null;
+  let brevoSenders = null;
   if (brevoKey) {
     try {
       const resp = await fetch('https://api.brevo.com/v3/account', {
@@ -167,6 +168,12 @@ export async function emailStatus(req, res) {
       });
       const data = await resp.json().catch(() => ({}));
       brevoAccount = resp.ok ? { ok: true, email: data.email, plan: data.plan } : { ok: false, status: resp.status, error: data };
+
+      const sendersResp = await fetch('https://api.brevo.com/v3/senders', {
+        headers: { 'api-key': brevoKey, accept: 'application/json' },
+      });
+      const sendersData = await sendersResp.json().catch(() => ({}));
+      brevoSenders = sendersResp.ok ? sendersData.senders : { error: sendersData };
     } catch (e) {
       brevoAccount = { ok: false, error: e.message };
     }
@@ -179,6 +186,7 @@ export async function emailStatus(req, res) {
       keyPreview: brevoKey ? `${brevoKey.substring(0, 10)}...` : 'NOT_SET',
       senderEmail: senderEmail || 'NOT_SET',
       accountCheck: brevoAccount,
+      verifiedSenders: brevoSenders,
     },
     smtp: {
       configured: Boolean(smtpUser && (process.env.SMTP_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD)),
