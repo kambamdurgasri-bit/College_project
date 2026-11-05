@@ -34,9 +34,10 @@ export function getEmailTransporter() {
 let cachedBrevoSender = null;
 
 async function resolveBrevoSender(apiKey) {
-  if (process.env.BREVO_SENDER_EMAIL) {
+  const configuredEmail = (process.env.BREVO_SENDER_EMAIL || "").trim();
+  if (configuredEmail) {
     return {
-      email: process.env.BREVO_SENDER_EMAIL.trim(),
+      email: configuredEmail,
       name: (process.env.BREVO_SENDER_NAME || "LearnTrack AI").trim(),
     };
   }
@@ -49,27 +50,26 @@ async function resolveBrevoSender(apiKey) {
     const resp = await fetch("https://api.brevo.com/v3/senders", {
       headers: { "api-key": apiKey, accept: "application/json" },
     });
-    if (resp.ok) {
-      const data = await resp.json();
-      if (Array.isArray(data.senders) && data.senders.length > 0) {
-        const active = data.senders.find((s) => s.active) || data.senders[0];
-        if (active?.email) {
-          cachedBrevoSender = {
-            email: active.email,
-            name: process.env.BREVO_SENDER_NAME || active.name || "LearnTrack AI",
-          };
-          return cachedBrevoSender;
-        }
-      }
+    if (!resp.ok) {
+      throw new Error(`Could not retrieve verified Brevo senders (HTTP ${resp.status}).`);
+    }
+
+    const data = await resp.json();
+    const active = Array.isArray(data.senders)
+      ? data.senders.find((sender) => sender.active && sender.email)
+      : null;
+    if (active) {
+      cachedBrevoSender = {
+        email: active.email,
+        name: (process.env.BREVO_SENDER_NAME || active.name || "LearnTrack AI").trim(),
+      };
+      return cachedBrevoSender;
     }
   } catch (err) {
-    console.warn("[email] Could not fetch verified Brevo senders:", err.message);
+    throw new Error(`Could not resolve a verified Brevo sender: ${err.message}`);
   }
 
-  return {
-    email: (process.env.BREVO_SENDER_EMAIL || process.env.SMTP_EMAIL || process.env.GMAIL_USER || "rguktapinfo@gmail.com").trim(),
-    name: (process.env.BREVO_SENDER_NAME || "LearnTrack AI").trim(),
-  };
+  throw new Error("No active verified Brevo sender is available. Verify a sender in Brevo or set BREVO_SENDER_EMAIL.");
 }
 
 /**
@@ -106,7 +106,7 @@ async function sendViaBrevo({ to, otp, subject, htmlContent }) {
     throw new Error(errorMsg);
   }
 
-  console.log(`[email] Password reset OTP sent successfully via Brevo from verified sender <${sender.email}> to: ${to} (MessageId: ${data?.messageId || "ok"})`);
+  console.log(`[email] Password reset email accepted by Brevo (MessageId: ${data?.messageId || "ok"}).`);
   return { sent: true, provider: "brevo", sender: sender.email, data };
 }
 
@@ -183,15 +183,16 @@ function buildOtpHtml(otp) {
  * Sends a secure password reset OTP.
  * Priority 1: Brevo HTTP API (Port 443 — reliable on Render Free tier)
  * Priority 2: Nodemailer Gmail SMTP (Fallback for local dev)
- * Priority 3: Fallback log for demo / evaluation
+ * Returns a development-only OTP fallback when delivery is unavailable.
  *
  * @param {string} to - Recipient email address
  * @param {string} otp - 6-digit verification code
- * @returns {Promise<{ sent: boolean, provider?: string, info?: any, reason?: string, otp?: string }>}
+ * @returns {Promise<{ sent: boolean, provider?: string, info?: any, reason?: string, error?: string, otp?: string }>}
  */
 export async function sendPasswordResetEmail(to, otp) {
   const subject = `${otp} is your LearnTrack AI password reset verification code`;
   const htmlContent = buildOtpHtml(otp);
+  let deliveryError;
 
   // 1. Try Brevo HTTP API (Recommended for Render)
   try {
@@ -200,6 +201,7 @@ export async function sendPasswordResetEmail(to, otp) {
       return brevoResult;
     }
   } catch (brevoErr) {
+    deliveryError = brevoErr.message;
     console.error(`[email] Brevo API failed: ${brevoErr.message}. Attempting SMTP fallback...`);
   }
 
@@ -217,31 +219,21 @@ export async function sendPasswordResetEmail(to, otp) {
       };
 
       const info = await transporter.sendMail(mailOptions);
-      console.log(`[email] Password reset OTP sent successfully via Gmail SMTP to: ${to}`);
+      console.log("[email] Password reset email accepted by Gmail SMTP.");
       return { sent: true, provider: "smtp", info };
     } catch (smtpErr) {
       console.error(`[email] Gmail SMTP failed: ${smtpErr.message}`);
-      console.warn(
-        `\n================================================================\n` +
-        `[email] NOTE: Render Free tier blocks outbound SMTP ports (587, 465).\n` +
-        `[email] To send real emails from Render, add BREVO_API_KEY to Render Environment!\n` +
-        `[email] Target Email: ${to}\n` +
-        `[email] Generated 6-digit OTP for testing: ${otp}\n` +
-        `================================================================\n`
-      );
-      return { sent: false, reason: "SMTP_FAILED", error: smtpErr.message, otp };
+      return {
+        sent: false,
+        reason: "SMTP_FAILED",
+        error: [deliveryError, smtpErr.message].filter(Boolean).join("; "),
+        otp,
+      };
     }
   }
 
-  // 3. Fallback when neither is configured
-  console.warn(
-    `\n================================================================\n` +
-    `[email] WARNING: No email service is configured!\n` +
-    `[email] On Render Free tier, add BREVO_API_KEY in the Render Environment tab.\n` +
-    `[email] Target Email: ${to}\n` +
-    `[email] Generated 6-digit OTP for testing: ${otp}\n` +
-    `================================================================\n`
-  );
-
-  return { sent: false, reason: "NOT_CONFIGURED", otp };
+  // 3. No provider accepted the message.
+  const reason = deliveryError || "No email provider is configured.";
+  console.error(`[email] Password reset email was not sent: ${reason}`);
+  return { sent: false, reason: "DELIVERY_FAILED", error: reason, otp };
 }

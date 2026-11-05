@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Mail } from "lucide-react";
+import { ArrowRight, Mail, AlertCircle } from "lucide-react";
 import AuthShell from "../../components/auth/AuthShell";
 import { useAuthStore } from "../../store/authStore";
 import {
@@ -17,18 +17,20 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const validate = () => {
     const next = {};
     if (!/^\S+@\S+\.\S+$/.test(email)) next.email = "Enter a valid email address.";
-    if (password.length < 6) next.password = "Password must be at least 6 characters.";
+    if (password.length < 8) next.password = "Password must be at least 8 characters.";
     setErrors(next);
     return Object.keys(next).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setServerError("");
     if (!validate()) return;
     setSubmitting(true);
     const result = await login({ email, password });
@@ -36,7 +38,7 @@ export default function LoginPage() {
     if (result.success) {
       navigate("/dashboard");
     } else {
-      setErrors((prev) => ({ ...prev, password: result.error }));
+      setServerError(result.error || "Login failed. Please check your credentials.");
     }
   };
 
@@ -56,13 +58,20 @@ export default function LoginPage() {
           Continue your learning progress on LearnTrack AI.
         </p>
 
+        {serverError && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300">
+            <AlertCircle size={16} className="shrink-0 text-rose-500" />
+            <span>{serverError}</span>
+          </div>
+        )}
+
         <FieldLabel>Email</FieldLabel>
         <TextField
           icon={Mail}
           type="email"
           placeholder="you@example.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => { setEmail(e.target.value); setServerError(""); setErrors({}); }}
           error={errors.email}
         />
 
@@ -70,7 +79,7 @@ export default function LoginPage() {
           label="Password"
           placeholder="Enter your password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => { setPassword(e.target.value); setServerError(""); setErrors({}); }}
           error={errors.password}
         />
 
@@ -89,11 +98,11 @@ export default function LoginPage() {
         </div>
 
         <PrimaryButton type="submit" disabled={submitting}>
-          Log In <ArrowRight size={15} />
+          {submitting ? "Logging in..." : <> Log In <ArrowRight size={15} /></>}
         </PrimaryButton>
 
         <p className="mt-5 text-center text-xs text-slate-500 dark:text-slate-400">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <button
             type="button"
             onClick={() => navigate("/register")}

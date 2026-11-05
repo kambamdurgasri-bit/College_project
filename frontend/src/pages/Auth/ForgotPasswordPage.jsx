@@ -131,10 +131,36 @@ export default function ForgotPasswordPage() {
         method: "POST",
         body: { email: cleanEmail },
       });
-      setStep("otp");
-      setSuccessInfo(`We sent a 6-digit OTP code to ${maskEmail(cleanEmail)}.`);
+      if (data?.devOtp) {
+        // Local dev: show OTP directly (email not configured)
+        setStep("otp");
+        setSuccessInfo(
+          `Development OTP: ${data.devOtp}. Email delivery failed: ${data.deliveryError || "check the backend logs."}`
+        );
+        setOtp(data.devOtp);
+      } else {
+        // Production (sent: true) or production email-failed (sent: false, no devOtp):
+        // Always advance to OTP step — OTP was created in DB and the user may
+        // still receive the email asynchronously, or should check spam.
+        setStep("otp");
+        if (data?.sent === false) {
+          setSuccessInfo(
+            `A verification code was generated for ${maskEmail(cleanEmail)}. ` +
+            `Email delivery encountered an issue — check your inbox & spam, or contact support.`
+          );
+        } else {
+          setSuccessInfo(
+            `If an account exists for ${maskEmail(cleanEmail)}, a 6-digit code will arrive shortly. Check spam/junk if you don't see it.`
+          );
+        }
+      }
     } catch (err) {
-      setError(err.message || "Failed to send OTP. Please try again.");
+      // Handle rate-limit (cooldown) gracefully
+      if (err.message && err.message.toLowerCase().includes("wait")) {
+        setError(err.message);
+      } else {
+        setError(err.message || "Failed to send OTP. Please try again.");
+      }
     } finally {
       clearTimeout(slowTimer);
       setSlowRequest(false);
@@ -154,12 +180,27 @@ export default function ForgotPasswordPage() {
         method: "POST",
         body: { email: email.trim() },
       });
-      setOtp("");
-      setResendCooldown(60);
-      setExpiryCountdown(300);
-      setSuccessInfo("A new 6-digit OTP has been sent to your email.");
 
-      // Restart resend timer
+      setOtp("");
+      setExpiryCountdown(300);
+
+      if (data?.devOtp) {
+        // Local dev
+        setSuccessInfo(
+          `Development OTP: ${data.devOtp}. Email delivery failed: ${data.deliveryError || "check the backend logs."}`
+        );
+        setOtp(data.devOtp);
+      } else if (data?.sent === false) {
+        // Production email failed — OTP was still re-created in DB
+        setSuccessInfo(
+          "A new verification code was generated. Email delivery encountered an issue — check your inbox & spam."
+        );
+      } else {
+        setSuccessInfo("If an account exists for that email, a new verification code will arrive shortly.");
+      }
+
+      // Restart resend timer (60 s)
+      setResendCooldown(60);
       clearInterval(resendTimerRef.current);
       resendTimerRef.current = setInterval(() => {
         setResendCooldown((prev) => {
@@ -171,7 +212,7 @@ export default function ForgotPasswordPage() {
         });
       }, 1000);
 
-      // Restart expiry timer
+      // Restart expiry timer (5 min)
       clearInterval(expiryTimerRef.current);
       expiryTimerRef.current = setInterval(() => {
         setExpiryCountdown((prev) => {
@@ -183,6 +224,7 @@ export default function ForgotPasswordPage() {
         });
       }, 1000);
     } catch (err) {
+      // Backend returns 429 with a human-readable cooldown message — surface it directly
       setError(err.message || "Failed to resend OTP. Please wait and try again.");
     } finally {
       setSubmitting(false);
@@ -354,13 +396,15 @@ export default function ForgotPasswordPage() {
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
               Security Step 2 of 3
             </span>
-            <SampleBadge text="OTP Sent" />
+            <SampleBadge
+              text={successInfo.startsWith("Development OTP") ? "Development mode" : "OTP requested"}
+            />
           </div>
           <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Verify Your Email
           </h1>
           <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
-            We sent a 6-digit OTP to{" "}
+            Enter the 6-digit OTP sent to your email or shown for local development.{" "}
             <strong className="text-slate-900 dark:text-white">{maskEmail(email)}</strong>.
           </p>
 
@@ -454,7 +498,7 @@ export default function ForgotPasswordPage() {
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
               Reset password
             </span>
-            <SampleBadge text="Gmail SMTP" />
+            <SampleBadge text="Email verification" />
           </div>
           <h1 className="mb-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Forgot your password?
@@ -483,7 +527,7 @@ export default function ForgotPasswordPage() {
           />
 
           <PrimaryButton type="submit" disabled={submitting}>
-            {submitting ? "Sending OTP via Gmail..." : <>Send OTP <ArrowRight size={15} /></>}
+            {submitting ? "Sending verification code..." : <>Send OTP <ArrowRight size={15} /></>}
           </PrimaryButton>
 
           {/* Quick link in case email arrived before network completes */}
